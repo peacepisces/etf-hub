@@ -5,7 +5,7 @@ const app = document.getElementById("app");
 const state = { base: null, live: null, liveError: false, stocks: {}, details: {}, sort: {}, chips: {}, query: {}, issuer: "",
                 view: null, detailTab: "components" };
 // 盤中即時轉接站：本機預覽用本機版（worker/dev.js），網站上用 Cloudflare Worker；空字串＝不開即時
-const CLOUD_LIVE_URL = "";
+const CLOUD_LIVE_URL = "https://etf-live.peacepisceslamb.workers.dev";
 const LIVE_URL = ["localhost", "127.0.0.1"].includes(location.hostname) ? "http://127.0.0.1:8787" : CLOUD_LIVE_URL;
 const LIVE_EVERY_MS = 20000;
 
