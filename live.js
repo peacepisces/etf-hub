@@ -13,6 +13,13 @@ const Live = (() => {
     return day >= 1 && day <= 5 && m >= 510 && m <= 840;
   }
 
+  // 真正的交易時間：台灣時間週一到五 09:00–13:30
+  function isMarketOpen(now) {
+    const t = new Date(now.getTime() + 8 * 3600e3);
+    const day = t.getUTCDay(), m = t.getUTCHours() * 60 + t.getUTCMinutes();
+    return day >= 1 && day <= 5 && m >= 540 && m <= 810;
+  }
+
   // 即時資料的日期要晚於收盤資料才覆蓋（晚上產生新資料後，不能被同一天的即時資料蓋掉）
   function isNewer(live, priceDate) {
     return !!(live && live.date && (!priceDate || live.date > priceDate));
@@ -37,15 +44,21 @@ const Live = (() => {
     });
   }
 
-  // 成份股：股價、漲跌用即時；張數、權重、市值照持股日
-  function mergeComponents(components, stocks, priceDate) {
+  // 成份股：股價、漲跌用即時；張數、權重、市值照持股日。
+  // closed：已收盤（或還沒開盤）。這時報價時間早於 13:30 的不完整（沒含收盤競價，2026-11-06 證交所停在 13:19:50），不用。
+  function mergeComponents(components, stocks, priceDate, closed) {
     if (!isNewer(stocks, priceDate)) return components;
-    return components.map(c => {
+    let used = false;
+    const out = components.map(c => {
       const q = stocks.quotes && stocks.quotes[c.s];
       if (!q || !isNum(q[0])) return c;
-      const [p, ref] = q;
-      return { ...c, px: p, chg: isNum(ref) && ref > 0 ? round2((p / ref - 1) * 100) : c.chg, live: true };
+      const [p, ref, time] = q;
+      if (closed && (time || "") < "13:30:00") return c;
+      used = true;
+      const ok = isNum(ref) && ref > 0;
+      return { ...c, px: p, chg: ok ? round2((p / ref - 1) * 100) : c.chg, chgv: ok ? round2(p - ref) : c.chgv, live: true };
     });
+    return used ? out : components;
   }
 
   // 要查即時報價的成份股：有市場別（tse／otc）、不是已出清的，每 60 檔一組
@@ -56,7 +69,7 @@ const Live = (() => {
     return out;
   }
 
-  return { isLiveWindow, isNewer, mergeOverview, mergeComponents, stockBatches };
+  return { isLiveWindow, isMarketOpen, isNewer, mergeOverview, mergeComponents, stockBatches };
 })();
 
 if (typeof module !== "undefined") module.exports = Live;

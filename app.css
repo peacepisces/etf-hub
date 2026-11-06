@@ -106,3 +106,4 @@ tbody tr.link:hover td { background: var(--panel-2); }
 .close-tag { color: var(--muted); }
 @keyframes blink { 50% { opacity: .3; } }
 @media (prefers-reduced-motion: reduce) { .live-tag::before { animation: none; } }
+.warn { color: var(--accent); font-size: 13px; margin: 12px 0 4px; }

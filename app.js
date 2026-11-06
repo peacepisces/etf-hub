@@ -36,6 +36,15 @@ function money(v) {   // 金額：億／萬
   if (a >= 1e4) return `${s}${num(a / 1e4, 1)} 萬`;
   return `${s}${num(a, 0)}`;
 }
+// 漲跌：▲105.00 (4.69%)（台股習慣紅漲綠跌）
+function arrowChg(v, p) {
+  if (!isNum(v) && !isNum(p)) return dash;
+  const s = isNum(v) ? v : p;
+  const mark = s > 0 ? "▲" : s < 0 ? "▼" : "";
+  const amt = isNum(v) ? num(Math.abs(v)) : "";
+  const pc = isNum(p) ? `${amt ? " " : ""}(${num(Math.abs(p))}%)` : "";
+  return `<span class="${signCls(s)}">${mark}${amt}${pc}</span>`;
+}
 function signedMoney(v) { return isNum(v) ? `<span class="${signCls(v)}">${v > 0 ? "+" : ""}${money(v)}</span>` : dash; }
 function aum(v) { return isNum(v) ? (v >= 10000 ? `${num(v / 10000, 2)} 兆` : num(v, 0)) : dash; }
 function yieldText(e) { return isNum(e.yield) ? (e.yield_est ? `<span class="est">預估 ${num(e.yield)}%</span>` : `${num(e.yield)}%`) : dash; }
@@ -221,7 +230,8 @@ async function pageEtf(o, code) {
     if (LIVE_URL && o.live) refreshStocks(code).then(() => { if (currentEtf() === code) render(); }, () => {});
   }
   const d = state.details[code];
-  const v = d.view && { ...d.view, components: Live.mergeComponents(d.view.components, state.stocks[code], o.price_date) };
+  const closed = !Live.isMarketOpen(new Date());
+  const v = d.view && { ...d.view, components: Live.mergeComponents(d.view.components, state.stocks[code], o.price_date, closed) };
   const i = o.etfs.indexOf(e), prev = o.etfs[i - 1], next = o.etfs[i + 1];
   const tabs = [["components", "成份股"], ["changes", "今日異動"], ["dividends", "配息紀錄"]];
   const stat = (k, val) => `<div><dt>${k}</dt><dd>${val}</dd></div>`;
@@ -236,7 +246,10 @@ async function pageEtf(o, code) {
       const list = v.changes[k];
       return `<h2>${l}<span class="count">${list.length}</span></h2>${list.length ? `<div class="tbl-wrap"><table><thead><tr><th>股票</th><th class="r">Δ張</th><th class="r">買賣金額</th><th class="r">持有張數</th><th class="r">權重</th></tr></thead><tbody>${list.map(x =>
         `<tr><td>${esc(x.n)}<span class="code">${esc(x.s)}</span></td><td class="r num ${signCls(x.dlots)}">${x.dlots > 0 ? "+" : ""}${num(x.dlots, 0)}</td><td class="r num">${signedMoney(x.amt)}</td><td class="r num">${num(x.lots, 0)}</td><td class="r num">${num(x.w)}%</td></tr>`).join("")}</tbody></table></div>` : '<p class="note">無</p>'}`;
-    }).join("") + (v.prev ? `<p class="note">比較 ${shortDate(v.prev)} → ${shortDate(v.date)} 的持股</p>` : '<p class="note">只有一天的持股資料，還不能比較</p>');
+    }).join("");
+    const gap = v.prev && v.missing && v.missing.length
+      ? `<p class="warn">⚠ 富邦缺 ${v.missing.map(shortDate).join("、")} 的持股資料，下面是 ${shortDate(v.prev)} → ${shortDate(v.date)} ${v.missing.length + 1} 天合計的異動</p>` : "";
+    body = gap + body + (v.prev ? `<p class="note">比較 ${shortDate(v.prev)} → ${shortDate(v.date)} 的持股</p>` : '<p class="note">只有一天的持股資料，還不能比較</p>');
   } else {
     const cols = [
       { key: "rank", label: "#", html: (x, i) => `<span class="muted">${i + 1}</span>` },
@@ -244,18 +257,20 @@ async function pageEtf(o, code) {
       { key: "w", label: "權重%", r: 1, get: x => x.w, html: x => num(x.w) },
       { key: "lots", label: "張數", r: 1, get: x => x.lots, html: x => num(x.lots, 0) },
       { key: "mv", label: "持有市值", r: 1, get: x => x.mv, html: x => money(x.mv) },
-      { key: "chg", label: "股價・漲跌", r: 1, get: x => x.chg, html: x => isNum(x.px) ? `${num(x.px)} ${pct(x.chg)}` : dash },
+      { key: "px", label: "股價", r: 1, get: x => x.px, html: x => num(x.px) },
+      { key: "chg", label: "漲跌", r: 1, get: x => x.chg, html: x => arrowChg(x.chgv, x.chg) },
       { key: "amt", label: "今日買賣金額", r: 1, get: x => x.amt, html: x => x.dlots ? signedMoney(x.amt) : dash },
       { key: "dlots", label: "Δ張", r: 1, get: x => x.dlots, html: x => x.dlots ? `<span class="${signCls(x.dlots)}">${x.dlots > 0 ? "+" : ""}${num(x.dlots, 0)}</span>` : dash },
       { key: "streak", label: "連買賣", r: 1, get: x => x.streak, html: x => x.streak ? `<span class="${signCls(x.streak)}">${x.streak > 0 ? "連買" : "連賣"}${Math.abs(x.streak)}</span>` : dash },
     ];
-    body = `<p class="lead">成份股 ${v.components.filter(x => x.flag !== "出清").length} 檔・持股日期 ${esc(v.date)}・點欄位名稱可以排序</p>` +
+    const pxd = v.components.some(x => x.live) ? "即時" : `${shortDate(v.components.map(x => x.pxd || "").sort().pop())} 收盤`;
+    body = `<p class="lead">成份股 ${v.components.filter(x => x.flag !== "出清").length} 檔・持股日期 ${esc(v.date)}・股價 ${pxd}・點欄位名稱可以排序</p>` +
       table(`etf-${code}`, cols, v.components, { key: "w", dir: -1 }).html;
   }
   return `<div class="nav-row"><a href="#/all">← 返回</a><span>${prev ? `<a href="${etfHref(prev)}">← 上一檔</a> ` : ""}${next ? `<a href="${etfHref(next)}">下一檔 →</a>` : ""}</span></div>
     <section class="etf-card"><h2>${esc(e.name)}<span class="code">${esc(e.code)}</span><span class="pill">${esc(e.mgmt)}・${esc(e.type)}・${esc(e.issuer)}</span></h2>
     <dl class="stats">${stat(e.live ? "成交價（即時）" : "收盤價", `${num(e.price)} ${pct(e.chg_pct)}`)}${stat("折溢價", pct(e.premium))}${stat("殖利率", yieldText(e))}
-      ${stat("資產規模", isNum(e.aum) ? `${aum(e.aum)} 億` : dash)}${stat("配息頻率", freqText(e.freq))}
+      ${stat("資產規模", isNum(e.aum) ? (e.aum >= 10000 ? aum(e.aum) : `${aum(e.aum)} 億`) : dash)}${stat("配息頻率", freqText(e.freq))}
       ${stat("價格日期", e.live ? `${shortDate(o.live.date)} ${esc(o.live.time || "")}` : shortDate(o.price_date))}${stat("持股日期", e.has_holdings ? shortDate(e.holdings_date) : "—")}</dl></section>
     <div class="subtabs">${tabs.map(([k, l]) => `<button type="button" data-tab="${k}" aria-selected="${state.detailTab === k}">${l}</button>`).join("")}</div>${body}`;
 }
