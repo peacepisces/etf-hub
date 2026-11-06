@@ -99,3 +99,10 @@ tbody tr.link:hover td { background: var(--panel-2); }
 .subtabs button[aria-selected="true"] { color: var(--fg); border-color: var(--accent); }
 .empty { color: var(--muted); padding: 24px 14px; text-align: center; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
 .error { color: var(--up); }
+
+/* 右上角：即時／收盤 */
+.live-tag { color: var(--down); font-weight: 500; }
+.live-tag::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 5px; border-radius: 50%; background: var(--down); vertical-align: 1px; animation: blink 2s ease-in-out infinite; }
+.close-tag { color: var(--muted); }
+@keyframes blink { 50% { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { .live-tag::before { animation: none; } }

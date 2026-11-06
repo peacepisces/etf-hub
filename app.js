@@ -2,7 +2,12 @@
 "use strict";
 
 const app = document.getElementById("app");
-const state = { overview: null, details: {}, sort: {}, chips: {}, query: {}, issuer: "", view: null, detailTab: "components" };
+const state = { base: null, live: null, liveError: false, stocks: {}, details: {}, sort: {}, chips: {}, query: {}, issuer: "",
+                view: null, detailTab: "components" };
+// 盤中即時轉接站：本機預覽用本機版（worker/dev.js），網站上用 Cloudflare Worker；空字串＝不開即時
+const CLOUD_LIVE_URL = "";
+const LIVE_URL = ["localhost", "127.0.0.1"].includes(location.hostname) ? "http://127.0.0.1:8787" : CLOUD_LIVE_URL;
+const LIVE_EVERY_MS = 20000;
 
 const PERIOD_LABELS = { ytd: "今年以來", m1: "近 1 月", m3: "近 3 月", m6: "近 6 月", y1: "近 1 年", y3: "近 3 年" };
 const FREQ_LABELS = { 12: "月配", 4: "季配", 2: "半年配", 1: "年配", 0: "不配息" };
@@ -10,6 +15,7 @@ const CHIPS = [
   ["主動", e => e.mgmt === "主動"], ["被動", e => e.mgmt === "被動"],
   ["市值型", e => e.type === "市值型"], ["高股息", e => e.type === "高股息"],
   ["債", e => e.type === "債券"], ["槓反", e => e.type === "槓反"], ["不配息", e => e.freq === 0],
+  ["國內", e => e.region === "國內"], ["國外", e => !!e.region && e.region !== "國內"],
 ];
 const GROUPS = ["市值型", "高股息", "債券", "槓反", "期貨", "其他"];
 
@@ -123,6 +129,7 @@ function pageOverview(o) {
     { key: "code", label: "代號", get: e => e.code, html: e => `<span class="num">${esc(e.code)}</span>` },
     { key: "name", label: "名稱", get: e => e.name, html: e => esc(e.name) },
     { key: "issuer", label: "發行", get: e => e.issuer, html: e => esc(e.issuer) },
+    { key: "region", label: "地區", get: e => e.region, html: e => e.region ? esc(e.region) : dash },
     { key: "price", label: "價格", r: 1, get: e => e.price, html: e => num(e.price) },
     { key: "nav", label: "淨值", r: 1, get: e => e.nav, html: e => num(e.nav) },
     { key: "premium", label: "折溢價", r: 1, get: e => e.premium, html: e => pct(e.premium) },
@@ -133,7 +140,7 @@ function pageOverview(o) {
     <select data-issuer aria-label="發行公司"><option value="">全部發行公司</option>${issuers.map(i =>
       `<option${i === state.issuer ? " selected" : ""}>${esc(i)}</option>`).join("")}</select></div>
     ${chipBar("ov")}
-    <p class="lead">共 ${t.sorted.length} 檔・淨值是收盤後的估計淨值（${shortDate(o.nav_date)}），點欄位名稱可以排序</p>${t.html}`;
+    <p class="lead">共 ${t.sorted.length} 檔・${o.live ? `價格、淨值、折溢價是盤中即時（證交所 ${esc(o.live.time || "")}，淨值為預估）` : `淨值是收盤後的估計淨值（${shortDate(o.nav_date)}）`}，點欄位名稱可以排序</p>${t.html}`;
 }
 
 // ---------- 完整排行 ----------
@@ -141,6 +148,7 @@ function rankCols() {
   return [
     { key: "rank", label: "排名", html: (e, i) => `<span class="muted">${i + 1}</span>` },
     { key: "name", label: "名稱", get: e => e.name, html: nameCell },
+    { key: "region", label: "地區", get: e => e.region, html: e => e.region ? esc(e.region) : dash },
     ...Object.keys(PERIOD_LABELS).map(k => ({ key: `ret.${k}`, label: PERIOD_LABELS[k], r: 1, get: e => e.ret[k], html: e => pct(e.ret[k]) })),
     { key: "aum", label: "資產規模（億）", r: 1, get: e => e.aum, html: e => aum(e.aum) },
     { key: "yield", label: "殖利率", r: 1, get: e => e.yield, html: yieldText },
@@ -208,8 +216,12 @@ function pageAll(o) {
 async function pageEtf(o, code) {
   const e = o.etfs.find(x => x.code === code);
   if (!e) return `<p class="empty">找不到 ${esc(code)}</p>`;
-  if (!state.details[code]) state.details[code] = await loadJson(`data/etf/${encodeURIComponent(code)}.json`);
-  const d = state.details[code], v = d.view;
+  if (!state.details[code]) {
+    state.details[code] = await loadJson(`data/etf/${encodeURIComponent(code)}.json`);
+    if (LIVE_URL && o.live) refreshStocks(code).then(() => { if (currentEtf() === code) render(); }, () => {});
+  }
+  const d = state.details[code];
+  const v = d.view && { ...d.view, components: Live.mergeComponents(d.view.components, state.stocks[code], o.price_date) };
   const i = o.etfs.indexOf(e), prev = o.etfs[i - 1], next = o.etfs[i + 1];
   const tabs = [["components", "成份股"], ["changes", "今日異動"], ["dividends", "配息紀錄"]];
   const stat = (k, val) => `<div><dt>${k}</dt><dd>${val}</dd></div>`;
@@ -242,15 +254,70 @@ async function pageEtf(o, code) {
   }
   return `<div class="nav-row"><a href="#/all">← 返回</a><span>${prev ? `<a href="${etfHref(prev)}">← 上一檔</a> ` : ""}${next ? `<a href="${etfHref(next)}">下一檔 →</a>` : ""}</span></div>
     <section class="etf-card"><h2>${esc(e.name)}<span class="code">${esc(e.code)}</span><span class="pill">${esc(e.mgmt)}・${esc(e.type)}・${esc(e.issuer)}</span></h2>
-    <dl class="stats">${stat("收盤價", `${num(e.price)} ${pct(e.chg_pct)}`)}${stat("折溢價", pct(e.premium))}${stat("殖利率", yieldText(e))}
+    <dl class="stats">${stat(e.live ? "成交價（即時）" : "收盤價", `${num(e.price)} ${pct(e.chg_pct)}`)}${stat("折溢價", pct(e.premium))}${stat("殖利率", yieldText(e))}
       ${stat("資產規模", isNum(e.aum) ? `${aum(e.aum)} 億` : dash)}${stat("配息頻率", freqText(e.freq))}
-      ${stat("價格日期", shortDate(o.price_date))}${stat("持股日期", e.has_holdings ? shortDate(e.holdings_date) : "—")}</dl></section>
+      ${stat("價格日期", e.live ? `${shortDate(o.live.date)} ${esc(o.live.time || "")}` : shortDate(o.price_date))}${stat("持股日期", e.has_holdings ? shortDate(e.holdings_date) : "—")}</dl></section>
     <div class="subtabs">${tabs.map(([k, l]) => `<button type="button" data-tab="${k}" aria-selected="${state.detailTab === k}">${l}</button>`).join("")}</div>${body}`;
 }
 app.addEventListener("click", ev => {
   const b = ev.target.closest("button[data-tab]");
   if (b) { state.detailTab = b.dataset.tab; render(); }
 });
+
+// ---------- 盤中即時 ----------
+// 收盤資料＋即時資料合併後的總覽（即時資料不比收盤資料新就照收盤資料）
+function current() {
+  const b = state.base;
+  const fresh = Live.isNewer(state.live, b.price_date);
+  return { ...b, etfs: Live.mergeOverview(b, state.live), live: fresh ? state.live : null };
+}
+function showAsof(o) {
+  const el = document.getElementById("asof");
+  const tag = o.live ? `<span class="live-tag">即時 ${esc(o.live.time || "")}</span>`
+    : `<span class="close-tag">收盤 ${shortDate(o.price_date)}</span>${state.liveError ? '<span class="muted">・即時連線失敗</span>' : ""}`;
+  el.innerHTML = `${tag}<span>・淨值 ${shortDate(o.nav_date)}・更新 ${esc(o.built)}</span>`;
+}
+async function fetchLive(path) {
+  const r = await fetch(`${LIVE_URL}${path}`, { cache: "no-cache" });
+  if (!r.ok) throw new Error(`即時 ${r.status}`);
+  return r.json();
+}
+async function refreshStocks(code) {
+  const v = state.details[code] && state.details[code].view;
+  if (!v) return;
+  const merged = { date: null, quotes: {} };
+  for (const batch of Live.stockBatches(v.components)) {
+    const r = await fetchLive(`/stocks?s=${batch}`);
+    merged.date = r.date || merged.date;
+    Object.assign(merged.quotes, r.quotes);
+  }
+  state.stocks[code] = merged;
+}
+let polledOnce = false;
+async function pollLive() {
+  if (!LIVE_URL || document.hidden || (polledOnce && !Live.isLiveWindow(new Date()))) return;
+  polledOnce = true;
+  try {
+    state.live = await fetchLive("/etf");
+    const code = currentEtf();
+    if (code) await refreshStocks(code);
+    state.liveError = false;
+  } catch (err) {
+    state.liveError = true;
+  }
+  // 正在搜尋框打字（尤其注音選字中）時不重畫，只更新右上角時間
+  if (document.activeElement && document.activeElement.dataset && document.activeElement.dataset.search) {
+    if (state.base) showAsof(current());
+  } else if (state.base) {
+    render();
+  }
+}
+function currentEtf() {
+  const m = location.hash.match(/^#\/etf\/([^?]+)/);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+setInterval(pollLive, LIVE_EVERY_MS);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) pollLive(); });
 
 // ---------- 路由 ----------
 async function loadJson(url) {
@@ -266,12 +333,9 @@ async function render() {
   const route = parts[0] || "";
   document.querySelectorAll("#tabs a").forEach(a => a.setAttribute("aria-current", a.dataset.route === route ? "page" : "false"));
   try {
-    if (!state.overview) {
-      state.overview = await loadJson("data/overview.json");
-      const o = state.overview;
-      document.getElementById("asof").textContent = `價格 ${shortDate(o.price_date)}・淨值 ${shortDate(o.nav_date)}・更新 ${o.built}`;
-    }
-    const o = state.overview;
+    if (!state.base) state.base = await loadJson("data/overview.json");
+    const o = current();
+    showAsof(o);
     let html;
     if (route === "rank") html = pageRank(o, new URLSearchParams(qs || ""));
     else if (route === "board") html = pageBoard(o);
@@ -290,4 +354,4 @@ window.addEventListener("hashchange", () => {
   lastRoute = route;
   render();
 });
-render();
+render().then(pollLive);
