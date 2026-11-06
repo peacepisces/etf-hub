@@ -2,7 +2,7 @@
 "use strict";
 
 const app = document.getElementById("app");
-const state = { base: null, live: null, liveError: false, stocks: {}, details: {}, sort: {}, chips: {}, query: {}, issuer: "",
+const state = { cols: {}, scrollPos: {}, base: null, live: null, liveError: false, stocks: {}, details: {}, sort: {}, chips: {}, query: {}, issuer: "",
                 view: null, detailTab: "components" };
 // 盤中即時轉接站：本機預覽用本機版（worker/dev.js），網站上用 Cloudflare Worker；空字串＝不開即時
 const CLOUD_LIVE_URL = "https://etf-live.peacepisceslamb.workers.dev";
@@ -52,20 +52,11 @@ function freqText(f) { return f === null || f === undefined ? "—" : FREQ_LABEL
 const shortDate = d => d ? d.slice(5).replace("-", "/") : "—";
 
 // ---------- 共用：排序表格 ----------
-// cols: {key, label, get(row) → 排序值, html(row) → 顯示, r: 靠右}
-function sortRows(rows, cols, s) {
-  const col = cols.find(c => c.key === s.key) || cols[0];
-  const dir = s.dir;
-  return rows.slice().sort((a, b) => {
-    const x = col.get(a), y = col.get(b);
-    const xn = x === null || x === undefined, yn = y === null || y === undefined;
-    if (xn || yn) return xn && yn ? 0 : xn ? 1 : -1;   // 沒有值的永遠排最後
-    return (x < y ? -1 : x > y ? 1 : 0) * dir;
-  });
-}
+// cols: {key, label, get(row) → 排序值, html(row) → 顯示, r: 靠右, text: 文字欄位}（排序在 table.js）
 function table(id, cols, rows, defaultSort, rowLink) {
   const s = state.sort[id] || (state.sort[id] = { ...defaultSort });
-  const sorted = sortRows(rows, cols, s);
+  state.cols[id] = cols;
+  const sorted = Table.sortRows(rows, cols, s);
   const head = cols.map(c => {
     const on = s.key === c.key;
     return `<th class="${c.r ? "r " : ""}${c.get ? "sortable" : ""}${on ? " sorted" : ""}" data-sort="${c.get ? c.key : ""}" data-table="${id}">${esc(c.label)}${on ? (s.dir > 0 ? " ▲" : " ▼") : ""}</th>`;
@@ -78,7 +69,8 @@ app.addEventListener("click", ev => {
   const th = ev.target.closest("th[data-sort]");
   if (th && th.dataset.sort) {
     const s = state.sort[th.dataset.table];
-    if (s.key === th.dataset.sort) s.dir = -s.dir; else { s.key = th.dataset.sort; s.dir = -1; }
+    if (s.key === th.dataset.sort) s.dir = -s.dir;
+    else { s.key = th.dataset.sort; s.dir = Table.firstDir((state.cols[th.dataset.table] || []).find(c => c.key === s.key)); }
     render();
     return;
   }
@@ -135,10 +127,10 @@ function pageOverview(o) {
   const issuers = [...new Set(o.etfs.map(e => e.issuer))].sort((a, b) => a.localeCompare(b, "zh-Hant"));
   const rows = applyFilters("ov", o.etfs).filter(e => !state.issuer || e.issuer === state.issuer);
   const cols = [
-    { key: "code", label: "代號", get: e => e.code, html: e => `<span class="num">${esc(e.code)}</span>` },
-    { key: "name", label: "名稱", get: e => e.name, html: e => esc(e.name) },
-    { key: "issuer", label: "發行", get: e => e.issuer, html: e => esc(e.issuer) },
-    { key: "region", label: "地區", get: e => e.region, html: e => e.region ? esc(e.region) : dash },
+    { key: "code", label: "代號", text: 1, get: e => e.code, html: e => `<span class="num">${esc(e.code)}</span>` },
+    { key: "name", label: "名稱", text: 1, get: e => e.name, html: e => esc(e.name) },
+    { key: "issuer", label: "發行", text: 1, get: e => e.issuer, html: e => esc(e.issuer) },
+    { key: "region", label: "地區", text: 1, get: e => e.region, html: e => e.region ? esc(e.region) : dash },
     { key: "price", label: "價格", r: 1, get: e => e.price, html: e => num(e.price) },
     { key: "nav", label: "淨值", r: 1, get: e => e.nav, html: e => num(e.nav) },
     { key: "premium", label: "折溢價", r: 1, get: e => e.premium, html: e => pct(e.premium) },
@@ -156,8 +148,8 @@ function pageOverview(o) {
 function rankCols() {
   return [
     { key: "rank", label: "排名", html: (e, i) => `<span class="muted">${i + 1}</span>` },
-    { key: "name", label: "名稱", get: e => e.name, html: nameCell },
-    { key: "region", label: "地區", get: e => e.region, html: e => e.region ? esc(e.region) : dash },
+    { key: "name", label: "名稱", text: 1, get: e => e.name, html: nameCell },
+    { key: "region", label: "地區", text: 1, get: e => e.region, html: e => e.region ? esc(e.region) : dash },
     ...Object.keys(PERIOD_LABELS).map(k => ({ key: `ret.${k}`, label: PERIOD_LABELS[k], r: 1, get: e => e.ret[k], html: e => pct(e.ret[k]) })),
     { key: "aum", label: "資產規模（億）", r: 1, get: e => e.aum, html: e => aum(e.aum) },
     { key: "yield", label: "殖利率", r: 1, get: e => e.yield, html: yieldText },
@@ -253,7 +245,7 @@ async function pageEtf(o, code) {
   } else {
     const cols = [
       { key: "rank", label: "#", html: (x, i) => `<span class="muted">${i + 1}</span>` },
-      { key: "name", label: "股票", get: x => x.n, html: x => `${esc(x.n)}<span class="code">${esc(x.s)}</span>${x.flag ? `<span class="pill ${x.flag === "新進" ? "up" : "down"}">${x.flag}</span>` : ""}` },
+      { key: "name", label: "股票", text: 1, get: x => x.n, html: x => `${esc(x.n)}<span class="code">${esc(x.s)}</span>${x.flag ? `<span class="pill ${x.flag === "新進" ? "up" : "down"}">${x.flag}</span>` : ""}` },
       { key: "w", label: "權重%", r: 1, get: x => x.w, html: x => num(x.w) },
       { key: "lots", label: "張數", r: 1, get: x => x.lots, html: x => num(x.lots, 0) },
       { key: "mv", label: "持有市值", r: 1, get: x => x.mv, html: x => money(x.mv) },
@@ -261,7 +253,7 @@ async function pageEtf(o, code) {
       { key: "chg", label: "漲跌", r: 1, get: x => x.chg, html: x => arrowChg(x.chgv, x.chg) },
       { key: "amt", label: "今日買賣金額", r: 1, get: x => x.amt, html: x => x.dlots ? signedMoney(x.amt) : dash },
       { key: "dlots", label: "Δ張", r: 1, get: x => x.dlots, html: x => x.dlots ? `<span class="${signCls(x.dlots)}">${x.dlots > 0 ? "+" : ""}${num(x.dlots, 0)}</span>` : dash },
-      { key: "streak", label: "連買賣", r: 1, get: x => x.streak, html: x => x.streak ? `<span class="${signCls(x.streak)}">${x.streak > 0 ? "連買" : "連賣"}${Math.abs(x.streak)}</span>` : dash },
+      { key: "streak", label: "連買賣", r: 1, get: x => x.streak, html: x => x.streak ? `<span class="${signCls(x.streak)}">${x.streak > 0 ? "連買" : "連賣"}${Math.abs(x.streak)}${x.more ? "+" : ""}</span>` : dash },
     ];
     const pxd = v.components.some(x => x.live) ? "即時" : `${shortDate(v.components.map(x => x.pxd || "").sort().pop())} 收盤`;
     body = `<p class="lead">成份股 ${v.components.filter(x => x.flag !== "出清").length} 檔・持股日期 ${esc(v.date)}・股價 ${pxd}・點欄位名稱可以排序</p>` +
@@ -271,7 +263,7 @@ async function pageEtf(o, code) {
     <section class="etf-card"><h2>${esc(e.name)}<span class="code">${esc(e.code)}</span><span class="pill">${esc(e.mgmt)}・${esc(e.type)}・${esc(e.issuer)}</span></h2>
     <dl class="stats">${stat(e.live ? "成交價（即時）" : "收盤價", `${num(e.price)} ${pct(e.chg_pct)}`)}${stat("折溢價", pct(e.premium))}${stat("殖利率", yieldText(e))}
       ${stat("資產規模", isNum(e.aum) ? (e.aum >= 10000 ? aum(e.aum) : `${aum(e.aum)} 億`) : dash)}${stat("配息頻率", freqText(e.freq))}
-      ${stat("價格日期", e.live ? `${shortDate(o.live.date)} ${esc(o.live.time || "")}` : shortDate(o.price_date))}${stat("持股日期", e.has_holdings ? shortDate(e.holdings_date) : "—")}</dl></section>
+      ${stat("價格日期", e.live ? `${shortDate(o.live.date)} ${esc(o.live.time || "")}` : shortDate(e.pdate))}${stat("持股日期", e.has_holdings ? shortDate(e.holdings_date) : "—")}</dl></section>
     <div class="subtabs">${tabs.map(([k, l]) => `<button type="button" data-tab="${k}" aria-selected="${state.detailTab === k}">${l}</button>`).join("")}</div>${body}`;
 }
 app.addEventListener("click", ev => {
@@ -362,11 +354,14 @@ async function render() {
     if (seq === renderSeq) app.innerHTML = `<p class="empty error">資料讀取失敗，請稍後重新整理</p><p class="note">${esc(err.message)}</p>`;
   }
 }
-let lastRoute = null;
+let lastRoute = location.hash.split("?")[0] || "#/";
+// 換頁時記住每一頁捲到哪裡，按「上一頁」回來時回到原位
 window.addEventListener("hashchange", () => {
-  const route = location.hash.split("?")[0];
-  if (route !== lastRoute) { if (route.startsWith("#/etf/")) state.detailTab = "components"; window.scrollTo(0, 0); }
+  const route = location.hash.split("?")[0] || "#/";
+  if (route === lastRoute) { render(); return; }
+  state.scrollPos[lastRoute] = window.scrollY;
+  if (route.startsWith("#/etf/")) state.detailTab = "components";
   lastRoute = route;
-  render();
+  render().then(() => window.scrollTo(0, state.scrollPos[route] || 0));
 });
 render().then(pollLive);
