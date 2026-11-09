@@ -10,7 +10,7 @@ const LIVE_URL = ["localhost", "127.0.0.1"].includes(location.hostname) ? "http:
 const LIVE_EVERY_MS = 20000;
 
 const PERIOD_LABELS = { ytd: "今年以來", m1: "近 1 月", m3: "近 3 月", m6: "近 6 月", y1: "近 1 年", y3: "近 3 年" };
-const FREQ_LABELS = { 12: "月配", 4: "季配", 2: "半年配", 1: "年配", 0: "不配息" };
+const FREQ_LABELS = { 12: "月配", 6: "雙月配", 4: "季配", 2: "半年配", 1: "年配", 0: "不配息" };
 const CHIPS = [
   ["主動", e => e.mgmt === "主動"], ["被動", e => e.mgmt === "被動"],
   ["市值型", e => e.type === "市值型"], ["高股息", e => e.type === "高股息"],
@@ -47,8 +47,14 @@ function arrowChg(v, p) {
 }
 function signedMoney(v) { return isNum(v) ? `<span class="${signCls(v)}">${v > 0 ? "+" : ""}${money(v)}</span>` : dash; }
 function aum(v) { return isNum(v) ? (v >= 10000 ? `${num(v / 10000, 2)} 兆` : num(v, 0)) : dash; }
-function yieldText(e) { return isNum(e.yield) ? (e.yield_est ? `<span class="est">預估 ${num(e.yield)}%</span>` : `${num(e.yield)}%`) : dash; }
-function freqText(f) { return f === null || f === undefined ? "—" : FREQ_LABELS[f] ?? "—"; }
+const notYet = '<span class="muted">尚未配息</span>';
+function yieldText(e) { return isNum(e.yield) ? (e.yield_est ? `<span class="est">預估 ${num(e.yield)}%</span>` : `${num(e.yield)}%`) : e.no_div ? notYet : dash; }
+// 還沒配過息：知道頻率就寫「季配（尚未配息）」，不知道就只寫「尚未配息」
+function freqText(e) {
+  const label = FREQ_LABELS[e.freq];
+  if (e.no_div) return label ? `${label}<span class="muted">（尚未配息）</span>` : notYet;
+  return label ?? "—";
+}
 const shortDate = d => d ? d.slice(5).replace("-", "/") : "—";
 
 // ---------- 共用：排序表格 ----------
@@ -171,7 +177,7 @@ function pageRank(o, params) {
   const body = state.view === "list" ? t.html : `<div class="cards">${t.sorted.map((e, i) => `<a class="card" href="${etfHref(e)}">
       <div class="top"><b>${i + 1}. ${esc(e.name)}</b><span class="code">${esc(e.code)}</span></div>
       <dl>${Object.keys(PERIOD_LABELS).map(k => `<div><dt>${PERIOD_LABELS[k]}</dt><dd>${pct(e.ret[k])}</dd></div>`).join("")}
-      <div><dt>規模（億）</dt><dd>${aum(e.aum)}</dd></div><div><dt>殖利率</dt><dd>${yieldText(e)}</dd></div><div><dt>配息</dt><dd>${freqText(e.freq)}</dd></div></dl></a>`).join("") || '<p class="empty">沒有符合的 ETF</p>'}</div>`;
+      <div><dt>規模（億）</dt><dd>${aum(e.aum)}</dd></div><div><dt>殖利率</dt><dd>${yieldText(e)}</dd></div><div><dt>配息</dt><dd>${freqText(e)}</dd></div></dl></a>`).join("") || '<p class="empty">沒有符合的 ETF</p>'}</div>`;
   return `<div class="tools">${searchBox("rank")}${state.view === "card" ? sortSel : ""}${seg}</div>${chipBar("rank")}
     <p class="lead">共 ${t.sorted.length} 檔・報酬含息（配息再投入）・價格 ${shortDate(o.price_date)}・更新 ${esc(o.built)}</p>${body}`;
 }
@@ -262,7 +268,7 @@ async function pageEtf(o, code) {
   return `<div class="nav-row"><a href="#/all">← 返回</a><span>${prev ? `<a href="${etfHref(prev)}">← 上一檔</a> ` : ""}${next ? `<a href="${etfHref(next)}">下一檔 →</a>` : ""}</span></div>
     <section class="etf-card"><h2>${esc(e.name)}<span class="code">${esc(e.code)}</span><span class="pill">${esc(e.mgmt)}・${esc(e.type)}・${esc(e.issuer)}</span></h2>
     <dl class="stats">${stat(e.live ? "成交價（即時）" : "收盤價", `${num(e.price)} ${pct(e.chg_pct)}`)}${stat("折溢價", pct(e.premium))}${stat("殖利率", yieldText(e))}
-      ${stat("資產規模", isNum(e.aum) ? (e.aum >= 10000 ? aum(e.aum) : `${aum(e.aum)} 億`) : dash)}${stat("配息頻率", freqText(e.freq))}
+      ${stat("資產規模", isNum(e.aum) ? (e.aum >= 10000 ? aum(e.aum) : `${aum(e.aum)} 億`) : dash)}${stat("配息頻率", freqText(e))}
       ${stat("價格日期", e.live ? `${shortDate(o.live.date)} ${esc(o.live.time || "")}` : shortDate(e.pdate))}${stat("持股日期", e.has_holdings ? shortDate(e.holdings_date) : "—")}</dl></section>
     <div class="subtabs">${tabs.map(([k, l]) => `<button type="button" data-tab="${k}" aria-selected="${state.detailTab === k}">${l}</button>`).join("")}</div>${body}`;
 }
