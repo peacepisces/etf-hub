@@ -236,7 +236,7 @@ async function pageEtf(o, code) {
   let body;
   if (state.detailTab === "dividends") {
     body = d.dividends.length ? `<div class="tbl-wrap"><table><thead><tr><th>除息日</th><th class="r">現金股利</th></tr></thead><tbody>${d.dividends.map(x =>
-      `<tr><td class="num">${esc(x.date)}</td><td class="r num">${num(x.cash, 4)}</td></tr>`).join("")}</tbody></table></div>` : '<p class="empty">沒有配息紀錄</p>';
+      `<tr><td class="num">${esc(x.date)}</td><td class="r num">${num(x.cash, 3)}</td></tr>`).join("")}</tbody></table></div>` : '<p class="empty">沒有配息紀錄</p>';
   } else if (!v) {
     body = '<p class="empty">這檔 ETF 沒有股票持股資料（債券、期貨或反向型）</p>';
   } else if (state.detailTab === "changes") {

@@ -37,6 +37,7 @@ const Live = (() => {
         out.price = p;
         out.chg = isNum(e.price) ? round2(p - e.price) : null;
         out.chg_pct = isNum(e.price) && e.price > 0 ? round2((p / e.price - 1) * 100) : null;
+        if (isNum(e.ycash) && p > 0) out.yield = round2(e.ycash / p * 100);   // 殖利率跟著即時股價
       }
       if (isNum(nav)) out.nav = nav;
       if (isNum(prem)) out.premium = prem;
