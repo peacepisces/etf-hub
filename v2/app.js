@@ -3,8 +3,8 @@
 
 const app = document.getElementById("app");
 const state = { base: null, index: null, candles: {}, details: {}, live: null, stocks: {},
-                sort: { rank: { key: "ret.ytd", dir: -1 }, stock: { key: "w", dir: -1 }, tag: { key: "ret.ytd", dir: -1 }, hold: { key: "w", dir: -1 }, div: { key: "yield", dir: -1 }, act: { key: "v", dir: -1 } },
-                range: "m3", chartMode: "kline", site: {}, passive: false, div: { f: { kind: "high", freq: "" }, ym: null }, act: { period: "y1", sel: [], issuer: null }, tab: "ops", hview: "stocks", filter: null, chart: null, cols: {} };
+                sort: { rank: { key: "ret.ytd", dir: -1 }, stock: { key: "w", dir: -1 }, tag: { key: "ret.ytd", dir: -1 }, hold: { key: "w", dir: -1 }, div: { key: "yield", dir: -1 }, act: { key: "v", dir: -1 }, radar: { key: "buy", dir: -1 } },
+                range: "m3", chartMode: "kline", site: {}, passive: false, div: { f: { kind: "high", freq: "" }, ym: null }, act: { period: "y1", sel: [], issuer: null }, track: { tab: "radar", q: "", mode: "all", osel: [] }, tab: "ops", hview: "stocks", filter: null, chart: null, cols: {} };
 // 即時：和舊版同一個轉接站、同樣頻率（web/app.js）；本機開發用本機轉接站
 const LIVE_URL = ["localhost", "127.0.0.1"].includes(location.hostname) ? "http://127.0.0.1:8787" : "https://etf-live.peacepisceslamb.workers.dev";
 const LIVE_EVERY_MS = 20000;
@@ -47,7 +47,15 @@ async function render() {
     const o = current();
     let html, draw = null;
     if (route === "rank") html = Pages.rank(o, state.sort.rank);
-    else if (route === "holdings") html = Pages.holdings();
+    else if (route === "holdings") {
+      if (params.get("tab") && seq === 1) state.track.tab = params.get("tab");
+      if (params.get("q") && !state.track.q) state.track.q = params.get("q");
+      if (params.get("etfs") && !state.track.osel.length) state.track.osel = params.get("etfs").split(",").slice(0, 6);
+      const [radar, index] = await Promise.all([loadSite("radar.json"), loadIndex()]);
+      const details = {};
+      if (state.track.tab === "overlap") for (const c of state.track.osel) details[c] = await loadDetail(c);
+      html = Track.page(radar, index, { ...state.track, passive: state.passive, sort: state.sort.radar }, details);
+    }
     else if (route === "active") {
       const [adata, radar] = await Promise.all([loadSite("active.json"), loadSite("radar.json")]);
       if (params.get("sel") && !state.act.sel.length) state.act.sel = params.get("sel").split(",").slice(0, Act.MAX);   // 分享連結用
@@ -123,6 +131,14 @@ app.addEventListener("click", ev => {
     render();
     return;
   }
+  const tk = ev.target.closest("button[data-ttab],button[data-mmode],button[data-ov-del]");
+  if (tk) {
+    if (tk.dataset.ttab) state.track.tab = tk.dataset.ttab;
+    if (tk.dataset.mmode) state.track.mode = tk.dataset.mmode;
+    if (tk.dataset.ovDel) state.track.osel = state.track.osel.filter(c => c !== tk.dataset.ovDel);
+    render();
+    return;
+  }
   const ap = ev.target.closest("button[data-aperiod],tr[data-aissuer]");
   if (ap) {
     if (ap.dataset.aperiod) state.act.period = ap.dataset.aperiod;
@@ -164,6 +180,16 @@ app.addEventListener("change", ev => {
   }
 });
 app.addEventListener("submit", ev => {
+  const mf = ev.target.closest("form[data-multi-form]");
+  if (mf) { ev.preventDefault(); state.track.q = mf.q.value; render(); return; }
+  const of = ev.target.closest("form[data-ov-form]");
+  if (of) {
+    ev.preventDefault();
+    const code = (of.code.value || "").trim().toUpperCase();
+    if (state.base.etfs.some(e => e.code === code) && !state.track.osel.includes(code) && state.track.osel.length < 6) state.track.osel.push(code);
+    render();
+    return;
+  }
   const f = ev.target.closest("form[data-watch-form]");
   if (!f) return;
   ev.preventDefault();

@@ -210,3 +210,6 @@ h2 { font-size: 16px; font-weight: 700; margin: 22px 0 8px; display: flex; align
 .legend .lg { font: inherit; font-family: var(--mono); font-size: 12px; background: none; border: 0; color: var(--fg); cursor: pointer; padding: 0 6px 0 0; }
 .legend .lg.off { opacity: .4; text-decoration: line-through; }
 .tbl tr.sub-row td { background: var(--panel-2); font-size: 13px; }
+
+/* 持股追蹤（第 6 階段） */
+.big { font-size: 16px; margin: 12px 0 4px; } .big b { font-family: var(--mono); font-size: 22px; color: var(--accent); }
