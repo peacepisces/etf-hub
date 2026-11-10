@@ -3,8 +3,8 @@
 
 const app = document.getElementById("app");
 const state = { base: null, index: null, candles: {}, details: {}, live: null, stocks: {},
-                sort: { rank: { key: "ret.ytd", dir: -1 }, stock: { key: "w", dir: -1 }, tag: { key: "ret.ytd", dir: -1 }, hold: { key: "w", dir: -1 }, div: { key: "yield", dir: -1 } },
-                range: "m3", chartMode: "kline", site: {}, passive: false, div: { f: { kind: "high", freq: "" }, ym: null }, tab: "ops", hview: "stocks", filter: null, chart: null, cols: {} };
+                sort: { rank: { key: "ret.ytd", dir: -1 }, stock: { key: "w", dir: -1 }, tag: { key: "ret.ytd", dir: -1 }, hold: { key: "w", dir: -1 }, div: { key: "yield", dir: -1 }, act: { key: "v", dir: -1 } },
+                range: "m3", chartMode: "kline", site: {}, passive: false, div: { f: { kind: "high", freq: "" }, ym: null }, act: { period: "y1", sel: [], issuer: null }, tab: "ops", hview: "stocks", filter: null, chart: null, cols: {} };
 // 即時：和舊版同一個轉接站、同樣頻率（web/app.js）；本機開發用本機轉接站
 const LIVE_URL = ["localhost", "127.0.0.1"].includes(location.hostname) ? "http://127.0.0.1:8787" : "https://etf-live.peacepisceslamb.workers.dev";
 const LIVE_EVERY_MS = 20000;
@@ -48,7 +48,18 @@ async function render() {
     let html, draw = null;
     if (route === "rank") html = Pages.rank(o, state.sort.rank);
     else if (route === "holdings") html = Pages.holdings();
-    else if (route === "active") html = Pages.active();
+    else if (route === "active") {
+      const [adata, radar] = await Promise.all([loadSite("active.json"), loadSite("radar.json")]);
+      if (params.get("sel") && !state.act.sel.length) state.act.sel = params.get("sel").split(",").slice(0, Act.MAX);   // 分享連結用
+      html = Act.page(adata, radar, { ...state.act, sort: state.sort.act, range: state.range });
+      draw = () => {
+        const el = document.getElementById("achart");
+        if (!el || !adata) return null;
+        const names = new Map(adata.etfs.map(e => [e.code, e.name]));
+        return Chart.drawMulti(el, document.getElementById("alegend"),
+          state.act.sel.map(c => ({ code: c, name: names.get(c), tri: adata.tri[c] })), adata.tri["0050"], state.range);
+      };
+    }
     else if (route === "dividend") html = Div.page(await loadSite("dividends.json"), { ...state.div, sort: state.sort.div }, storage());
     else if (route === "tools") html = Pages.tools();
     else if (route === "tag") html = Pages.tag(o, args[0] || "", args[1] || "", state.sort.tag);
@@ -85,7 +96,7 @@ async function render() {
     if (seq !== renderSeq) return;
     if (state.chart) { state.chart.destroy(); state.chart = null; }
     app.innerHTML = html;
-    if (draw) state.chart = draw();
+    if (draw) state.chart = draw() || null;
   } catch (err) {
     if (seq === renderSeq) app.innerHTML = `<p class="empty error">資料讀取失敗，請稍後重新整理</p><p class="note">${Core.esc(err.message)}</p>`;
   }
@@ -112,6 +123,13 @@ app.addEventListener("click", ev => {
     render();
     return;
   }
+  const ap = ev.target.closest("button[data-aperiod],tr[data-aissuer]");
+  if (ap) {
+    if (ap.dataset.aperiod) state.act.period = ap.dataset.aperiod;
+    if (ap.dataset.aissuer !== undefined) state.act.issuer = state.act.issuer === ap.dataset.aissuer ? null : ap.dataset.aissuer;
+    render();
+    return;
+  }
   const dv = ev.target.closest("button[data-dkind],button[data-dfreq],button[data-cal],button[data-pf-del]");
   if (dv) {
     const ds = dv.dataset;
@@ -133,6 +151,7 @@ app.addEventListener("click", ev => {
 });
 app.addEventListener("change", ev => {
   if (ev.target.matches("input[data-passive]")) { state.passive = ev.target.checked; render(); }
+  if (ev.target.matches("input[data-asel]")) { state.act.sel = Act.toggle(state.act.sel, ev.target.dataset.asel); render(); }
   if (ev.target.matches("input[data-pf]")) {   // 組合勾選：預設 1 張
     const pf = Div.loadPf(storage()), c = ev.target.dataset.pf;
     if (ev.target.checked) pf[c] = pf[c] || 1; else delete pf[c];

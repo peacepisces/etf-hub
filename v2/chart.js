@@ -187,7 +187,52 @@ const Chart = (() => {
     return { destroy() { chart.remove(); } };
   }
 
-  return { RANGES, MAS, MA_COLORS, slice, movingAverage, rebase, alignBase, drawKline, drawReturns, drawPremium };
+  // 多檔疊圖（主動式 B、工具的績效比較）：dataviz 預設 8 色（已驗證），依勾選順序固定配色；0050 灰色虛線；點圖例隱藏
+  const MULTI = { dark: ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300", "#9085e9", "#e66767"],
+                  light: ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948"] };
+  function drawMulti(el, legendEl, series, base, range) {
+    const b = baseChart(el);
+    if (!b) return { destroy() {} };
+    const { LC, chart, css } = b;
+    const colors = MULTI[matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"];
+    const all = series.map(s => s.tri || []).filter(t => t.length);
+    const last = all.reduce((m, t) => t[t.length - 1][0] > m ? t[t.length - 1][0] : m, "");
+    const from = range === "all" || !last ? "" : startOfRange(last, range);
+    const lines = series.map((s, i) => {
+      const pts = rebase((s.tri || []).filter(p => p[0] >= from));
+      const line = chart.addLineSeries({ color: colors[i % colors.length], lineWidth: 2, priceLineVisible: false, lastValueVisible: false,
+        priceFormat: { type: "custom", formatter: fmtPct } });
+      line.setData(pts);
+      return { s, line, color: colors[i % colors.length], map: new Map(pts.map(p => [p.time, p.value])), on: true };
+    });
+    const first = lines.map(l => [...l.map.keys()][0]).filter(Boolean).sort()[0] || from;
+    const bpts = alignBase(base || [], first);
+    const bl = chart.addLineSeries({ color: css("--muted"), lineWidth: 2, lineStyle: LC.LineStyle.Dashed, priceLineVisible: false,
+      lastValueVisible: false, priceFormat: { type: "custom", formatter: fmtPct } });
+    bl.setData(bpts);
+    lines.push({ s: { code: "0050", name: "0050" }, line: bl, color: css("--muted"), map: new Map(bpts.map(p => [p.time, p.value])), on: true, dashed: true });
+    chart.timeScale().fitContent();
+    function legend(time) {
+      const t = tkey(time);
+      legendEl.innerHTML = lines.map((l, i) => `<button type="button" class="lg${l.on ? "" : " off"}" data-lg="${i}">
+        <i style="color:${l.color}">${l.dashed ? "┅" : "━"}</i> ${l.s.code} ${t ? fmtPct(l.map.get(t)) : ""}</button>`).join("");
+    }
+    legend(null);
+    chart.subscribeCrosshairMove(p => legend(p && p.time));
+    const onClick = ev => {
+      const btn = ev.target.closest("button[data-lg]");
+      if (!btn) return;
+      const l = lines[+btn.dataset.lg];
+      l.on = !l.on;
+      l.line.applyOptions({ visible: l.on });
+      legend(null);
+    };
+    legendEl.addEventListener("click", onClick);
+    return { destroy() { legendEl.removeEventListener("click", onClick); chart.remove(); } };
+  }
+  const startOfRange = (end, range) => range in MONTHS || range === "ytd" ? startOf(end, range) : "";
+
+  return { RANGES, MAS, MA_COLORS, slice, movingAverage, rebase, alignBase, drawKline, drawReturns, drawPremium, drawMulti };
 })();
 
 if (typeof module !== "undefined") module.exports = Chart;

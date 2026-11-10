@@ -205,3 +205,8 @@ h2 { font-size: 16px; font-weight: 700; margin: 22px 0 8px; display: flex; align
 .cal-c a { color: var(--fg); text-decoration: none; font-family: var(--mono); white-space: nowrap; } .cal-c a i { color: var(--muted); font-style: normal; }
 .chips b { align-self: center; font-size: 14px; }
 @media (max-width: 600px) { .pf-months { grid-template-columns: repeat(3, 1fr); } .cal-c { min-height: 54px; } .cal-c a i { display: none; } }
+
+/* 主動式（第 5 階段） */
+.legend .lg { font: inherit; font-family: var(--mono); font-size: 12px; background: none; border: 0; color: var(--fg); cursor: pointer; padding: 0 6px 0 0; }
+.legend .lg.off { opacity: .4; text-decoration: line-through; }
+.tbl tr.sub-row td { background: var(--panel-2); font-size: 13px; }
