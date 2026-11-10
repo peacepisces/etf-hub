@@ -2,7 +2,7 @@
 "use strict";
 
 const app = document.getElementById("app");
-const state = { base: null, index: null, candles: {}, details: {}, live: null,
+const state = { base: null, index: null, candles: {}, details: {}, live: null, stocks: {},
                 sort: { rank: { key: "ret.ytd", dir: -1 }, stock: { key: "w", dir: -1 }, tag: { key: "ret.ytd", dir: -1 }, hold: { key: "w", dir: -1 } },
                 range: "m3", chartMode: "kline", tab: "ops", hview: "stocks", filter: null, chart: null, cols: {} };
 // 即時：和舊版同一個轉接站、同樣頻率（web/app.js）；本機開發用本機轉接站
@@ -60,7 +60,8 @@ async function render() {
       const needBase = state.chartMode === "ret" || (state.tab === "holdings" && state.hview === "industry");
       const [d, candles, d0050] = await Promise.all([loadDetail(code),
         state.chartMode === "kline" ? loadCandles(code) : null, needBase ? loadDetail("0050") : null]);
-      html = Pages.etf(o, code, { d, candles, d0050, range: state.range, chart: state.chartMode, tab: state.tab,
+      if (state.tab === "holdings" && d && d.holdings && !(code in state.stocks)) refreshStocks(code).then(updateHoldings);
+      html = Pages.etf(o, code, { d: withLive(code, d), candles, d0050, range: state.range, chart: state.chartMode, tab: state.tab,
                                   hview: state.hview, filter: state.filter, hsort: state.sort.hold });
       draw = () => {
         const legend = document.getElementById("legend");
@@ -109,6 +110,35 @@ app.addEventListener("click", ev => {
   if (tr) location.hash = tr.dataset.href;
 });
 
+// ---------- 成分股即時報價（轉接站 /stocks，每 60 檔一組；同舊版） ----------
+function withLive(code, d) {
+  const s = state.stocks[code];
+  if (!d || !d.holdings || !s) return d;
+  const closed = !Live.isMarketOpen(new Date());
+  return { ...d, holdings: { ...d.holdings, rows: Detail.liveRows(d.holdings.rows, s, state.base.price_date, closed) } };
+}
+async function refreshStocks(code) {
+  const d = state.details[code];
+  if (!d || !d.holdings) return;
+  const merged = { date: null, quotes: {} };
+  try {
+    for (const batch of Live.stockBatches(d.holdings.rows)) {
+      const r = await fetch(`${LIVE_URL}/stocks?s=${batch}`, { cache: "no-cache" });
+      if (!r.ok) return;
+      const j = await r.json();
+      merged.date = j.date || merged.date;
+      Object.assign(merged.quotes, j.quotes);
+    }
+  } catch (err) { return; }
+  state.stocks[code] = merged;
+}
+// 只重畫成分股分頁的內容（上面的圖表不動）
+function updateHoldings() {
+  const body = document.querySelector(".tab-body");
+  if (!body || state.tab !== "holdings" || !shownCode) return;
+  body.innerHTML = Detail.holdings(withLive(shownCode, state.details[shownCode]), state.hview, state.sort.hold, state.details["0050"]);
+}
+
 // ---------- 盤中即時（只更新詳細頁上半部的價格，不重畫整頁，圖表的縮放不會被打斷） ----------
 let polledOnce = false;
 async function pollLive() {
@@ -128,6 +158,7 @@ async function pollLive() {
   const d1 = document.getElementById("live-d1");
   if (d1) d1.innerHTML = Core.pct(e.chg_pct);
   asof.innerHTML = `<span class="live-tag">即時 ${Core.esc(state.live.time || "")}</span>`;
+  if (state.tab === "holdings") { await refreshStocks(shownCode); updateHoldings(); }
 }
 setInterval(pollLive, LIVE_EVERY_MS);
 pollLive();

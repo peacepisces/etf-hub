@@ -89,6 +89,27 @@ const Detail = (() => {
         <tbody>${body || `<tr><td colspan="7" class="muted">${filter ? "沒有符合的股票" : "這天沒有加減碼"}</td></tr>`}</tbody></table></div>`;
   }
 
+  // 台股漲跌停（同 metrics.limit_flag）：參考價 ×1.1 依升降單位往下取、×0.9 往上取
+  const tick = p => p < 10 ? 0.01 : p < 50 ? 0.05 : p < 100 ? 0.1 : p < 500 ? 0.5 : p < 1000 ? 1 : 5;
+  function limitFlag(price, ref) {
+    if (!isNum(price) || !isNum(ref) || ref <= 0) return null;
+    const hi = ref * 1.1, lo = ref * 0.9;
+    const up = Math.floor(hi / tick(hi) + 1e-6) * tick(hi), down = Math.ceil(lo / tick(lo) - 1e-6) * tick(lo);
+    return Math.abs(price - up) < 1e-6 ? "up" : Math.abs(price - down) < 1e-6 ? "down" : null;
+  }
+
+  // 成分股即時價（轉接站 /stocks，和舊版同一套 Live.mergeComponents）：股價、漲跌、漲跌停用即時；張數、權重、市值照持股日
+  function liveRows(rows, stocks, priceDate, closed) {
+    const L = typeof Live !== "undefined" ? Live : require("../web/live.js");
+    if (!stocks) return rows;
+    const merged = L.mergeComponents(rows, stocks, priceDate, closed);
+    if (merged === rows) return rows;
+    return merged.map(r => {
+      const q = r.live && stocks.quotes[r.s];
+      return q ? { ...r, limit: limitFlag(q[0], q[1]) } : r;
+    });
+  }
+
   // ---------- 成分股／產業分布 ----------
   const HOLD_COLS = [
     { key: "n", label: "標的", text: 1, get: r => r.n, html: r => `${esc(r.n || r.s)}<span class="code">${esc(r.s)}</span>` },
@@ -132,7 +153,7 @@ const Detail = (() => {
       <td>${esc(o.kind)}</td><td class="r num">${money(o.amt)}</td><td class="r num">${isNum(o.w) ? pct(o.w) : dash}</td></tr>`).join("")}
       </tbody></table></div>` : "";
     return `${sw}<section class="card">${DN.svg(DN.slices(items))}</section>
-      <p class="note">持股日 ${ymd(h.date)}・市值用持股日股價、股價與漲跌用最新收盤・${esc(nonstockNote(h))}</p>${t.html}${others}`;
+      <p class="note">持股日 ${ymd(h.date)}・市值用持股日股價・股價與漲跌用${h.rows.some(r => r.live) ? '<span class="live-tag">即時報價</span>' : "最新收盤"}（海外股沒有即時）・${esc(nonstockNote(h))}</p>${t.html}${others}`;
   }
 
   // ---------- 折溢價 ----------
@@ -179,7 +200,7 @@ const Detail = (() => {
       <tr><th>費用</th><td>經理費、保管費、實際內扣費用：第 7 階段（投信投顧公會資料）</td></tr></tbody></table></div>${note}`;
   }
 
-  return { head, tabs, ops, holdings, premium, dividend, info, money, TABS };
+  return { head, tabs, ops, holdings, premium, dividend, info, money, limitFlag, liveRows, TABS };
 })();
 
 if (typeof module !== "undefined") module.exports = Detail;
