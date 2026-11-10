@@ -3,8 +3,8 @@
 
 const app = document.getElementById("app");
 const state = { base: null, index: null, candles: {}, details: {}, live: null, stocks: {},
-                sort: { rank: { key: "ret.ytd", dir: -1 }, stock: { key: "w", dir: -1 }, tag: { key: "ret.ytd", dir: -1 }, hold: { key: "w", dir: -1 } },
-                range: "m3", chartMode: "kline", site: {}, passive: false, tab: "ops", hview: "stocks", filter: null, chart: null, cols: {} };
+                sort: { rank: { key: "ret.ytd", dir: -1 }, stock: { key: "w", dir: -1 }, tag: { key: "ret.ytd", dir: -1 }, hold: { key: "w", dir: -1 }, div: { key: "yield", dir: -1 } },
+                range: "m3", chartMode: "kline", site: {}, passive: false, div: { f: { kind: "high", freq: "" }, ym: null }, tab: "ops", hview: "stocks", filter: null, chart: null, cols: {} };
 // 即時：和舊版同一個轉接站、同樣頻率（web/app.js）；本機開發用本機轉接站
 const LIVE_URL = ["localhost", "127.0.0.1"].includes(location.hostname) ? "http://127.0.0.1:8787" : "https://etf-live.peacepisceslamb.workers.dev";
 const LIVE_EVERY_MS = 20000;
@@ -49,7 +49,7 @@ async function render() {
     if (route === "rank") html = Pages.rank(o, state.sort.rank);
     else if (route === "holdings") html = Pages.holdings();
     else if (route === "active") html = Pages.active();
-    else if (route === "dividend") html = Pages.dividend();
+    else if (route === "dividend") html = Div.page(await loadSite("dividends.json"), { ...state.div, sort: state.sort.div }, storage());
     else if (route === "tools") html = Pages.tools();
     else if (route === "tag") html = Pages.tag(o, args[0] || "", args[1] || "", state.sort.tag);
     else if (route === "etf") {
@@ -112,6 +112,20 @@ app.addEventListener("click", ev => {
     render();
     return;
   }
+  const dv = ev.target.closest("button[data-dkind],button[data-dfreq],button[data-cal],button[data-pf-del]");
+  if (dv) {
+    const ds = dv.dataset;
+    if (ds.dkind) state.div.f.kind = ds.dkind;
+    if (ds.dfreq !== undefined) state.div.f.freq = ds.dfreq;
+    if (ds.cal) {
+      const base = state.div.ym || (state.site["dividends.json"] || {}).today?.slice(0, 7) || new Date().toISOString().slice(0, 7);
+      const [y, m] = base.split("-").map(Number), t = new Date(Date.UTC(y, m - 1 + Number(ds.cal), 1));
+      state.div.ym = t.toISOString().slice(0, 7);
+    }
+    if (ds.pfDel) { const pf = Div.loadPf(storage()); delete pf[ds.pfDel]; Div.savePf(storage(), pf); }
+    render();
+    return;
+  }
   const un = ev.target.closest("button[data-unwatch]");
   if (un) { ev.preventDefault(); Today.saveWatch(storage(), Today.loadWatch(storage()).filter(c => c !== un.dataset.unwatch)); render(); return; }
   const tr = ev.target.closest("tr[data-href]");
@@ -119,6 +133,16 @@ app.addEventListener("click", ev => {
 });
 app.addEventListener("change", ev => {
   if (ev.target.matches("input[data-passive]")) { state.passive = ev.target.checked; render(); }
+  if (ev.target.matches("input[data-pf]")) {   // 組合勾選：預設 1 張
+    const pf = Div.loadPf(storage()), c = ev.target.dataset.pf;
+    if (ev.target.checked) pf[c] = pf[c] || 1; else delete pf[c];
+    Div.savePf(storage(), pf); render();
+  }
+  if (ev.target.matches("input[data-pf-lots]")) {
+    const pf = Div.loadPf(storage());
+    pf[ev.target.dataset.pfLots] = Math.max(0, Math.floor(Number(ev.target.value) || 0));
+    Div.savePf(storage(), pf); render();
+  }
 });
 app.addEventListener("submit", ev => {
   const f = ev.target.closest("form[data-watch-form]");

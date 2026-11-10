@@ -188,3 +188,20 @@ h2 { font-size: 16px; font-weight: 700; margin: 22px 0 8px; display: flex; align
 .evlist li.today .d { color: var(--accent); font-weight: 700; }
 .evlist .k { font-size: 11px; border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; color: var(--muted); flex: none; }
 .evlist .dt { font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+/* 配息頁（第 4 階段） */
+.pf-items { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.pf-item { display: inline-flex; align-items: center; gap: 6px; background: var(--panel-2); border-radius: 8px; padding: 4px 8px; font-size: 13px; }
+.pf-item input { width: 64px; font: inherit; background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; }
+.pf-item button { background: none; border: 0; color: var(--muted); cursor: pointer; }
+.pf-months { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-top: 10px; }
+.pf-m { background: var(--panel-2); border-radius: 8px; padding: 6px 8px; display: flex; flex-direction: column; }
+.pf-m span { font-size: 12px; color: var(--muted); } .pf-m b { font-family: var(--mono); } .pf-m.zero b { color: var(--muted); font-weight: 400; }
+.cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 10px; }
+.cal-w { text-align: center; font-size: 12px; color: var(--muted); }
+.cal-c { min-height: 74px; background: var(--panel-2); border-radius: 6px; padding: 4px; display: flex; flex-direction: column; gap: 1px; font-size: 11px; overflow: hidden; }
+.cal-c.empty { background: transparent; } .cal-c.today { outline: 1.5px solid var(--accent); }
+.cal-c .dn { color: var(--muted); font-family: var(--mono); }
+.cal-c a { color: var(--fg); text-decoration: none; font-family: var(--mono); white-space: nowrap; } .cal-c a i { color: var(--muted); font-style: normal; }
+.chips b { align-self: center; font-size: 14px; }
+@media (max-width: 600px) { .pf-months { grid-template-columns: repeat(3, 1fr); } .cal-c { min-height: 54px; } .cal-c a i { display: none; } }
