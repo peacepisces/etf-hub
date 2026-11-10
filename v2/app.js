@@ -4,7 +4,7 @@
 const app = document.getElementById("app");
 const state = { base: null, index: null, candles: {}, details: {}, live: null, stocks: {},
                 sort: { rank: { key: "ret.ytd", dir: -1 }, stock: { key: "w", dir: -1 }, tag: { key: "ret.ytd", dir: -1 }, hold: { key: "w", dir: -1 } },
-                range: "m3", chartMode: "kline", tab: "ops", hview: "stocks", filter: null, chart: null, cols: {} };
+                range: "m3", chartMode: "kline", site: {}, passive: false, tab: "ops", hview: "stocks", filter: null, chart: null, cols: {} };
 // 即時：和舊版同一個轉接站、同樣頻率（web/app.js）；本機開發用本機轉接站
 const LIVE_URL = ["localhost", "127.0.0.1"].includes(location.hostname) ? "http://127.0.0.1:8787" : "https://etf-live.peacepisceslamb.workers.dev";
 const LIVE_EVERY_MS = 20000;
@@ -26,6 +26,9 @@ async function loadOr(cache, key, path, empty) {
   }
   return cache[key];
 }
+const loadSite = name => loadOr(state.site, name, `v2/${name}`, null);
+// localStorage 在隱私模式、預覽可能丟錯：包起來，壞掉就當空的
+function storage() { try { return window.localStorage; } catch { return { getItem: () => null, setItem() { throw new Error("no storage"); } }; } }
 const loadCandles = code => loadOr(state.candles, code, `v2/candles/${encodeURIComponent(code)}.json`, { rows: [] });
 const loadDetail = code => loadOr(state.details, code, `v2/etf/${encodeURIComponent(code)}.json`, null);
 
@@ -75,7 +78,10 @@ async function render() {
       };
     }
     else if (route === "stock") html = Pages.stock(o, await loadIndex(), args[0] || "", state.sort.stock);
-    else html = Pages.today();
+    else {
+      const [radar, events, flows] = await Promise.all(["radar.json", "events.json", "flows.json"].map(n => loadSite(n)));
+      html = Today.page(o, { radar, events, flows }, { watch: Today.loadWatch(storage()), passive: state.passive });
+    }
     if (seq !== renderSeq) return;
     if (state.chart) { state.chart.destroy(); state.chart = null; }
     app.innerHTML = html;
@@ -106,8 +112,23 @@ app.addEventListener("click", ev => {
     render();
     return;
   }
+  const un = ev.target.closest("button[data-unwatch]");
+  if (un) { ev.preventDefault(); Today.saveWatch(storage(), Today.loadWatch(storage()).filter(c => c !== un.dataset.unwatch)); render(); return; }
   const tr = ev.target.closest("tr[data-href]");
   if (tr) location.hash = tr.dataset.href;
+});
+app.addEventListener("change", ev => {
+  if (ev.target.matches("input[data-passive]")) { state.passive = ev.target.checked; render(); }
+});
+app.addEventListener("submit", ev => {
+  const f = ev.target.closest("form[data-watch-form]");
+  if (!f) return;
+  ev.preventDefault();
+  const code = (f.code.value || "").trim().toUpperCase();
+  if (!state.base.etfs.some(e => e.code === code)) { f.code.value = ""; f.code.placeholder = `找不到 ${code}`; return; }
+  const list = Today.loadWatch(storage());
+  if (!list.includes(code)) Today.saveWatch(storage(), list.concat(code));
+  render();
 });
 
 // ---------- 成分股即時報價（轉接站 /stocks，每 60 檔一組；同舊版） ----------
@@ -149,6 +170,7 @@ async function pollLive() {
     if (!r.ok) return;
     state.live = await r.json();
   } catch (err) { return; }
+  if (state.base && Router.parse(location.hash).route === "today" && Live.isNewer(state.live, state.base.price_date)) { render(); return; }
   if (!state.base || !shownCode || !Live.isNewer(state.live, state.base.price_date)) return;
   const e = current().etfs.find(x => x.code === shownCode);
   const px = document.getElementById("live-px"), chg = document.getElementById("live-chg"), asof = document.getElementById("live-asof");
