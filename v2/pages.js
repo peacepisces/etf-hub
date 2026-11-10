@@ -38,14 +38,14 @@ const Pages = (() => {
     { key: "chg_pct", label: "漲跌", r: 1, get: e => e.chg_pct, html: e => pct(e.chg_pct) },
     { key: "ret.m1", label: "近 1 月", r: 1, get: e => e.ret.m1, html: e => pct(e.ret.m1) },
     { key: "ret.m3", label: "近 3 月", r: 1, get: e => e.ret.m3, html: e => pct(e.ret.m3) },
-    { key: "ret.ytd", label: "今年以來", r: 1, get: e => e.ret.ytd, html: e => pct(e.ret.ytd) },
-    { key: "ret.y1", label: "近 1 年", r: 1, get: e => e.ret.y1, html: e => pct(e.ret.y1) },
-    { key: "aum", label: "規模", r: 1, get: e => e.aum, html: e => aum(e.aum) },
-    { key: "yield", label: "殖利率", r: 1, get: e => e.yield, html: yieldText },
+    { key: "ret.ytd", label: "今年以來", r: 1, get: e => e.ret.ytd, html: e => pct(e.ret.ytd), top: "ytd", tag: "今年" },
+    { key: "ret.y1", label: "近 1 年", r: 1, get: e => e.ret.y1, html: e => pct(e.ret.y1), top: "y1", tag: "1年" },
+    { key: "aum", label: "規模", r: 1, get: e => e.aum, html: e => aum(e.aum), top: "aum", tag: "規模" },
+    { key: "yield", label: "殖利率", r: 1, get: e => e.yield, html: yieldText, top: "yld", tag: "息" },
   ];
   function rank(o, s) {
     const t = V2Table.render("rank", RANK_COLS, o.etfs, s, { rowLink: e => etfHref(e.code) });
-    return `<p class="lead">暫時版，第 7 階段改成完整排行・共 ${t.sorted.length} 檔・報酬含息・價格 ${shortDate(o.price_date)}・點欄位名稱排序，前 3 名會標出來</p>${t.html}`;
+    return `<p class="lead">暫時版，第 7 階段改成完整排行・共 ${t.sorted.length} 檔・報酬含息・價格 ${shortDate(o.price_date)}・點欄位名稱排序・今年以來、近 1 年、規模、殖利率各自的前 3 名會用顏色和標籤標出來</p>${t.html}`;
   }
 
   // ---------- ETF 詳細頁（雛形） ----------
@@ -80,7 +80,7 @@ const Pages = (() => {
       { key: "name", label: "ETF", text: 1, get: r => r.name, html: nameCell },
       { key: "mgmt", label: "管理", text: 1, get: r => r.mgmt, html: r => esc(r.mgmt || "—") },
       { key: "type", label: "類型", text: 1, get: r => r.type, html: r => esc(r.type || "—") },
-      { key: "w", label: "權重", r: 1, get: r => r.w, html: r => isNum(r.w) ? `${num(r.w)}%` : dash },
+      { key: "w", label: "權重", r: 1, get: r => r.w, html: r => isNum(r.w) ? `${num(r.w)}%` : dash, top: "w", tag: "權重" },
     ];
     const t = V2Table.render("stock", cols, rows, s, { rowLink: r => etfHref(r.code) });
     return `<section class="card"><h2>${esc(st.n || code)}<span class="code">${esc(code)}</span></h2>

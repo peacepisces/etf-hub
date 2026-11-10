@@ -4,6 +4,8 @@
   --fg: #e7eaf0; --muted: #8a94a6; --accent: #f0b54a; --accent-bg: rgba(240,181,74,.18);
   --up: #ff5d62; --down: #33c27f; --up-bg: rgba(255,93,98,.12); --down-bg: rgba(51,194,127,.12);
   --zebra: rgba(255,255,255,.025); --hover: #1f2633;
+  /* 各欄前 3 名的顏色（色盲分不開的組合靠文字標籤補）：今年以來、近 1 年、殖利率、規模 */
+  --t-ytd: #c98500; --t-y1: #3987e5; --t-yld: #d55181; --t-aum: #199e70;
   --sans: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   color-scheme: dark;
@@ -13,6 +15,7 @@
   --fg: #141920; --muted: #5c6677; --accent: #a8690f; --accent-bg: rgba(168,105,15,.14);
   --up: #d42a37; --down: #0f8a57; --up-bg: rgba(212,42,55,.08); --down-bg: rgba(15,138,87,.08);
   --zebra: rgba(0,0,0,.025); --hover: #eef1f6;
+  --t-ytd: #b07400; --t-y1: #2a78d6; --t-yld: #d6457f; --t-aum: #118c60;
   color-scheme: light } }
 
 * { box-sizing: border-box; }
@@ -78,9 +81,12 @@ h2 { font-size: 16px; font-weight: 700; margin: 22px 0 8px; display: flex; align
 .tbl .sticky { position: sticky; left: 0; z-index: 1; box-shadow: 1px 0 0 var(--line); }
 .tbl .r { text-align: right; }
 .tbl .mo { border-left: 1px solid var(--line); text-align: center; min-width: 48px; }
+.t-ytd { --t: var(--t-ytd); } .t-y1 { --t: var(--t-y1); } .t-yld { --t: var(--t-yld); } .t-aum { --t: var(--t-aum); } .t-w { --t: var(--accent); }
 .tbl tbody tr td.top, .tbl tbody tr:nth-child(even) td.top, .tbl tbody tr:hover td.top {
-  font-weight: 700; color: var(--fg); background: linear-gradient(var(--accent-bg), var(--accent-bg)), var(--panel); }
-.rk { display: inline-block; min-width: 16px; height: 16px; line-height: 16px; border-radius: 50%; background: var(--accent); color: var(--bg); font-size: 10px; font-weight: 700; text-align: center; margin-right: 6px; font-family: var(--mono); }
+  font-weight: 700; background: color-mix(in srgb, var(--t) 20%, var(--panel)); }
+.tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
+.tag { font-size: 11px; line-height: 16px; padding: 0 5px; border-radius: 4px; white-space: nowrap; color: var(--fg);
+  background: color-mix(in srgb, var(--t) 22%, transparent); box-shadow: inset 2px 0 0 var(--t); }
 
 /* ETF 詳細頁（第 1 階段雛形） */
 .etf-head h2 { margin: 0; font-size: 20px; }
