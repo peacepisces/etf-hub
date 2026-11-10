@@ -1,9 +1,13 @@
-// 新版啟動：選單、路由 → 分頁、表格排序、搜尋框。即時資料之後階段再接。
+// 新版啟動：選單、路由 → 分頁、表格排序、搜尋框、詳細頁分頁切換、盤中即時價（詳細頁上半部）。
 "use strict";
 
 const app = document.getElementById("app");
-const state = { base: null, index: null, candles: {}, sort: { rank: { key: "ret.ytd", dir: -1 }, stock: { key: "w", dir: -1 } },
-                range: "m3", chart: null, cols: {} };
+const state = { base: null, index: null, candles: {}, details: {}, live: null,
+                sort: { rank: { key: "ret.ytd", dir: -1 }, stock: { key: "w", dir: -1 }, tag: { key: "ret.ytd", dir: -1 }, hold: { key: "w", dir: -1 } },
+                range: "m3", chartMode: "kline", tab: "ops", hview: "stocks", filter: null, chart: null, cols: {} };
+// 即時：和舊版同一個轉接站、同樣頻率（web/app.js）；本機開發用本機轉接站
+const LIVE_URL = ["localhost", "127.0.0.1"].includes(location.hostname) ? "http://127.0.0.1:8787" : "https://etf-live.peacepisceslamb.workers.dev";
+const LIVE_EVERY_MS = 20000;
 
 document.getElementById("nav").innerHTML = Router.NAV.map(([k, l]) => `<a href="#/${k}" data-route="${k}">${l}</a>`).join("");
 
@@ -11,45 +15,76 @@ async function loadIndex() {
   if (!state.index) state.index = await Core.loadJson("v2/search.json");
   return state.index;
 }
-async function loadCandles(code) {
-  if (!(code in state.candles)) {
-    try { state.candles[code] = await Core.loadJson(`v2/candles/${encodeURIComponent(code)}.json`); }
+// 404（剛上市、還沒產生）→ 記住「沒有」；網路錯誤 → 丟出去顯示讀取失敗，下次再讀
+async function loadOr(cache, key, path, empty) {
+  if (!(key in cache)) {
+    try { cache[key] = await Core.loadJson(path); }
     catch (err) {
-      if (!Core.isNotFound(err)) throw err;   // 網路錯誤：顯示讀取失敗，不記住，下次再讀
-      state.candles[code] = { rows: [] };     // 剛上市、還沒產生 K 線檔
+      if (!Core.isNotFound(err)) throw err;
+      cache[key] = empty;
     }
   }
-  return state.candles[code];
+  return cache[key];
+}
+const loadCandles = code => loadOr(state.candles, code, `v2/candles/${encodeURIComponent(code)}.json`, { rows: [] });
+const loadDetail = code => loadOr(state.details, code, `v2/etf/${encodeURIComponent(code)}.json`, null);
+
+// 收盤資料＋即時資料（即時比收盤新才覆蓋）
+function current() {
+  return { ...state.base, etfs: Live.mergeOverview(state.base, state.live) };
 }
 
-let renderSeq = 0;
+let renderSeq = 0, shownCode = null;
 async function render() {
   const seq = ++renderSeq;
-  const { route, args } = Router.parse(location.hash);
+  const { route, args, params } = Router.parse(location.hash);
   document.querySelectorAll("#nav a").forEach(a => a.setAttribute("aria-current", a.dataset.route === route ? "page" : "false"));
-  if (state.chart) { state.chart.destroy(); state.chart = null; }
   try {
     if (!state.base) state.base = await Core.loadJson("overview.json");
-    const o = state.base;
-    let html, candles;
+    const o = current();
+    let html, draw = null;
     if (route === "rank") html = Pages.rank(o, state.sort.rank);
     else if (route === "holdings") html = Pages.holdings();
     else if (route === "active") html = Pages.active();
     else if (route === "dividend") html = Pages.dividend();
     else if (route === "tools") html = Pages.tools();
-    else if (route === "etf") { candles = await loadCandles(args[0] || ""); html = Pages.etf(o, args[0] || "", candles, state.range); }
+    else if (route === "tag") html = Pages.tag(o, args[0] || "", args[1] || "", state.sort.tag);
+    else if (route === "etf") {
+      const code = args[0] || "";
+      if (code !== shownCode) {   // 換一檔：清掉篩選；網址可以帶 ?tab=holdings&chart=ret&view=industry（分享連結用）
+        shownCode = code; state.filter = null;
+        if (params.get("tab")) state.tab = params.get("tab");
+        if (params.get("chart")) state.chartMode = params.get("chart");
+        if (params.get("view")) state.hview = params.get("view");
+      }
+      const needBase = state.chartMode === "ret" || (state.tab === "holdings" && state.hview === "industry");
+      const [d, candles, d0050] = await Promise.all([loadDetail(code),
+        state.chartMode === "kline" ? loadCandles(code) : null, needBase ? loadDetail("0050") : null]);
+      html = Pages.etf(o, code, { d, candles, d0050, range: state.range, chart: state.chartMode, tab: state.tab,
+                                  hview: state.hview, filter: state.filter, hsort: state.sort.hold });
+      draw = () => {
+        const legend = document.getElementById("legend");
+        const k = document.getElementById("kline"), r = document.getElementById("returns");
+        const out = [];
+        if (k && candles) out.push(Chart.drawKline(k, legend, candles.rows, state.range));
+        if (r && d) out.push(Chart.drawReturns(r, legend, d.tri, d0050 && d0050.tri, state.range, code));
+        const pb = document.getElementById("prem-bars");
+        if (pb && d) out.push(Chart.drawPremium(pb, document.getElementById("prem-lines"), document.getElementById("prem-legend"), d.premium));
+        return { destroy() { out.forEach(c => c.destroy()); } };
+      };
+    }
     else if (route === "stock") html = Pages.stock(o, await loadIndex(), args[0] || "", state.sort.stock);
     else html = Pages.today();
     if (seq !== renderSeq) return;
+    if (state.chart) { state.chart.destroy(); state.chart = null; }
     app.innerHTML = html;
-    const el = document.getElementById("kline");
-    if (el && candles) state.chart = Chart.drawKline(el, document.getElementById("legend"), candles.rows, state.range);
+    if (draw) state.chart = draw();
   } catch (err) {
     if (seq === renderSeq) app.innerHTML = `<p class="empty error">資料讀取失敗，請稍後重新整理</p><p class="note">${Core.esc(err.message)}</p>`;
   }
 }
 
-// 表頭排序、點列進詳細頁、K 線期間
+// 表頭排序、點列進詳細頁、K 線期間、圖表切換、詳細頁分頁、操作日報篩選、成分股／產業切換
 app.addEventListener("click", ev => {
   const th = ev.target.closest("th[data-sort]");
   if (th) {
@@ -59,11 +94,43 @@ app.addEventListener("click", ev => {
     render();
     return;
   }
-  const b = ev.target.closest("button[data-range]");
-  if (b) { state.range = b.dataset.range; render(); return; }
+  const b = ev.target.closest("button[data-range],button[data-chart],button[data-tab],button[data-filter],button[data-hview]");
+  if (b) {
+    const ds = b.dataset;
+    if (ds.range) state.range = ds.range;
+    if (ds.chart) state.chartMode = ds.chart;
+    if (ds.tab) state.tab = ds.tab;
+    if (ds.hview) state.hview = ds.hview;
+    if (ds.filter) state.filter = state.filter === ds.filter ? null : ds.filter;   // 再點一次取消
+    render();
+    return;
+  }
   const tr = ev.target.closest("tr[data-href]");
   if (tr) location.hash = tr.dataset.href;
 });
+
+// ---------- 盤中即時（只更新詳細頁上半部的價格，不重畫整頁，圖表的縮放不會被打斷） ----------
+let polledOnce = false;
+async function pollLive() {
+  if (document.hidden || (polledOnce && !Live.isLiveWindow(new Date()))) return;
+  polledOnce = true;
+  try {
+    const r = await fetch(`${LIVE_URL}/etf`, { cache: "no-cache" });
+    if (!r.ok) return;
+    state.live = await r.json();
+  } catch (err) { return; }
+  if (!state.base || !shownCode || !Live.isNewer(state.live, state.base.price_date)) return;
+  const e = current().etfs.find(x => x.code === shownCode);
+  const px = document.getElementById("live-px"), chg = document.getElementById("live-chg"), asof = document.getElementById("live-asof");
+  if (!e || !px) return;
+  px.textContent = Core.num(e.price);
+  chg.innerHTML = Core.pct(e.chg_pct);
+  const d1 = document.getElementById("live-d1");
+  if (d1) d1.innerHTML = Core.pct(e.chg_pct);
+  asof.innerHTML = `<span class="live-tag">即時 ${Core.esc(state.live.time || "")}</span>`;
+}
+setInterval(pollLive, LIVE_EVERY_MS);
+pollLive();
 
 // ---------- 搜尋框 ----------
 const q = document.getElementById("q"), box = document.getElementById("suggest");

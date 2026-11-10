@@ -48,26 +48,49 @@ const Pages = (() => {
     return `<p class="lead">暫時版，第 7 階段改成完整排行・共 ${t.sorted.length} 檔・報酬含息・價格 ${shortDate(o.price_date)}・點欄位名稱排序・今年以來、近 1 年、規模、殖利率各自的前 3 名會用顏色和標籤標出來</p>${t.html}`;
   }
 
-  // ---------- ETF 詳細頁（雛形） ----------
-  function etf(o, code, candles, range) {
+  // ---------- ETF 詳細頁 ----------
+  // v：{candles, d（v2/etf 檔或 null）, d0050, range, chart: "kline"|"ret", tab, hview, filter, hsort}
+  function etf(o, code, v) {
     const e = o.etfs.find(x => x.code === code);
     if (!e) return `<p class="empty">找不到 ${esc(code)}</p>`;
+    const chips = Chart.RANGES.map(([k, l]) => `<button type="button" data-range="${k}" aria-pressed="${k === v.range}">${l}</button>`).join("");
+    const modes = `<div class="chips"><button type="button" data-chart="kline" aria-pressed="${v.chart !== "ret"}">K 線</button>
+      <button type="button" data-chart="ret" aria-pressed="${v.chart === "ret"}">含息走勢 vs 0050</button></div>`;
+    let chart;
+    if (v.chart === "ret") {
+      chart = v.d && v.d.tri && v.d.tri.length
+        ? `<div class="chart-tools">${modes}<div class="chips">${chips}</div></div><div class="legend" id="legend"></div><div class="chart" id="returns"></div>
+           <p class="chart-note">含息報酬（配息再投入），期間第一天＝0%・0050 是灰色虛線</p>`
+        : `<div class="chart-tools">${modes}</div><p class="empty">尚無報酬資料</p>`;
+    } else {
+      chart = `<div class="chart-tools">${modes}<div class="chips">${chips}</div></div>${kline(v.candles)}`;
+    }
+    const tab = v.tab || "ops";
+    const body = tab === "holdings" ? Detail.holdings(v.d, v.hview, v.hsort, v.d0050)
+      : tab === "premium" ? Detail.premium(v.d) : tab === "dividend" ? Detail.dividend(v.d)
+        : tab === "info" ? Detail.info(e, v.d) : Detail.ops(v.d, v.filter);
+    return `${Detail.head(e, v.d, o.etfs)}<section class="card chart-box">${chart}</section>
+      ${Detail.tabs(tab)}<div class="tab-body">${body}</div>`;
+  }
+
+  function tag(o, kind, value, s) {
+    const list = Tags.list(o.etfs, kind, value);
+    if (!list.length) return `<p class="empty">找不到這個標籤</p>`;
+    const t = V2Table.render("tag", RANK_COLS, list, s, { rowLink: e => etfHref(e.code) });
+    return `<section class="card"><h2>${esc(Tags.LABELS[kind] || "")}：${esc(Tags.title(kind, value))}</h2>
+      <p class="meta">共 ${list.length} 檔・點欄位名稱排序</p></section>${t.html}`;
+  }
+
+  function kline(candles) {
     const rows = (candles && candles.rows) || [];
     const notes = ["實際成交價（除息缺口保留，可看填息；分割已調整）"];
     for (const [d, r] of (candles && candles.splits) || []) {
       notes.push(r < 1 ? `${d.replaceAll("-", "/")} 分割 1→${Math.round(1 / r)}，之前價格已換算` : `${d.replaceAll("-", "/")} 反分割 ${Math.round(r)}→1，之前價格已換算`);
     }
     if (candles && candles.truncated && candles.earliest) notes.push(`資料自 ${candles.earliest.slice(0, 7).replace("-", "/")} 起`);
-    const chips = Chart.RANGES.map(([k, l]) => `<button type="button" data-range="${k}" aria-pressed="${k === range}">${l}</button>`).join("");
-    const chart = rows.length
-      ? `<div class="chart-tools"><div class="chips">${chips}</div></div><div class="legend" id="legend"></div><div class="chart" id="kline"></div>
-         <p class="chart-note">${notes.map(esc).join("・")}</p>`
+    return rows.length
+      ? `<div class="legend" id="legend"></div><div class="chart" id="kline"></div><p class="chart-note">${notes.map(esc).join("・")}</p>`
       : '<p class="empty">尚無 K 線資料</p>';
-    return `<p class="lead">雛形，第 2 階段補完整內容（各期報酬、操作日報、成分股圓餅圖、折溢價、配息、標籤）</p>
-      <section class="card etf-head"><h2>${esc(e.name)}<span class="code">${esc(e.code)}</span></h2>
-      <div class="px-line"><span class="px">${num(e.price)}</span>${pct(e.chg_pct)}<span class="meta">${shortDate(e.pdate)} 收盤</span></div>
-      <div class="meta">${esc(e.mgmt)}・${esc(e.type)}・${esc(e.issuer)}・淨值 ${num(e.nav)}・折溢價 ${pct(e.premium)}・規模 ${aum(e.aum)}・殖利率 ${yieldText(e)}</div></section>
-      <section class="card chart-box">${chart}</section>`;
   }
 
   // ---------- 個股反查 ----------
@@ -87,5 +110,5 @@ const Pages = (() => {
       <p class="meta">被 ${rows.length} 檔 ETF 持有・各 ETF 最新持股日・點列看該 ETF</p></section>${t.html}`;
   }
 
-  return { today, rank, holdings, active, dividend, tools, etf, stock };
+  return { today, rank, holdings, active, dividend, tools, etf, tag, stock };
 })();
