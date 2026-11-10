@@ -63,7 +63,7 @@ const Track = (() => {
     const t = TB.render("radar", cols, rows, st.sort);
     return `<section class="card"><div class="tc-head"><h2>換股雷達（完整）</h2>
       <label class="chk"><input type="checkbox" data-passive ${st.passive ? "checked" : ""}> 包含被動式</label></div>
-      <p class="note">共 ${rows.length} 檔股票・同買＝加碼＋新建倉、同賣＝減碼＋出清的 ETF 檔數・加碼／減碼看每單位持股數 ≥0.5% 且股數同方向・各 ETF 依各自最新持股日・紅色代號是買、綠色是賣</p></section>${t.html}`;
+      <p class="note">共 ${rows.length} 檔股票・同買＝加碼＋新建倉、同賣＝減碼＋出清的 ETF 檔數・加碼／減碼看每單位持股數 ≥0.5% 且股數同方向・${TD().radarDates(radar)}・紅色代號是買、綠色是賣</p></section>${t.html}`;
   }
 
   function multiSection(index, st) {

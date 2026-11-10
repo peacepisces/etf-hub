@@ -197,7 +197,16 @@ const Detail = (() => {
       ["類型", v(e.type)], ["區域", v(e.region)], ["配息頻率", v(T.FREQ[e.freq])]];
     const note = d && d.info ? "" : '<p class="note">上櫃 ETF（多半是債券 ETF）的基本資料，證交所開放資料沒有提供</p>';
     return `<div class="tbl-wrap"><table class="tbl kvt"><tbody>${rows.map(([k, x]) => `<tr><th>${k}</th><td>${x}</td></tr>`).join("")}
-      <tr><th>費用</th><td>經理費、保管費、實際內扣費用：第 7 階段（投信投顧公會資料）</td></tr></tbody></table></div>${note}`;
+      ${feeRows(d && d.fees)}</tbody></table></div>${note}`;
+  }
+
+  function feeRows(f) {
+    if (!f) return '<tr><th>費用</th><td>投信投顧公會沒有這檔的資料（上櫃 ETF 或剛上市）</td></tr>';
+    const annual = isNum(f.annual) ? `${num(f.annual)}%${f.estimated ? `（預估：只有 ${f.months} 個月資料，換算一年）` : ""}` : dash;
+    return `<tr><th>內扣費用（年）</th><td>${annual}<div class="sub">近 12 個月經理費＋保管費＋保證費＋其他費用 ÷ 目前規模（公會沒有同期淨資產，規模變化大的會有誤差）・不含交易成本</div></td></tr>
+      <tr><th>經理費（說明書）</th><td>${f.mgmt_text ? esc(f.mgmt_text) : dash}</td></tr>
+      <tr><th>保管費（說明書）</th><td>${f.custody_text ? esc(f.custody_text) : dash}</td></tr>
+      <tr><th>交易成本（近一年）</th><td>${money(f.trade)}<div class="sub">手續費＋交易稅（資料：投信投顧公會）</div></td></tr>`;
   }
 
   return { head, tabs, ops, holdings, premium, dividend, info, money, limitFlag, liveRows, TABS };

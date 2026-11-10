@@ -87,7 +87,15 @@ const Today = (() => {
       : '<p class="empty">今天沒有同買同賣的股票</p>';
     const toggle = `<label class="chk"><input type="checkbox" data-passive ${withPassive ? "checked" : ""}> 包含被動式</label>`;
     return card("換股雷達", toggle + body, "#/holdings",
-      "同買＝加碼＋新建倉的 ETF 檔數；加碼／減碼看每單位持股數（扣掉申購贖回）≥0.5% 且股數同方向・各 ETF 依各自最新持股日");
+      `同買＝加碼＋新建倉的 ETF 檔數；加碼／減碼看每單位持股數（扣掉申購贖回）≥0.5% 且股數同方向・${radarDates(radar)}`);
+  }
+
+  // 依據的持股日範圍（各 ETF 最新持股日可能不同）；持股太舊的 ETF 不算今天的動作
+  function radarDates(radar) {
+    if (!radar || !radar.range) return "各 ETF 依各自最新持股日";
+    const [a, b] = radar.range;
+    const st = (radar.stale || []).length;
+    return `持股日 ${shortDate(a)}${a !== b ? `～${shortDate(b)}` : ""}${st ? `・${st} 檔持股資料過期，未列入` : ""}`;
   }
 
   function eventsCard(ev) {
@@ -131,7 +139,7 @@ const Today = (() => {
     return `${perfRow(o, opts.watch)}<div class="tgrid two">${radarCard(data.radar, opts.passive)}${eventsCard(data.events)}</div>${lowerCards(o, data.flows)}`;
   }
 
-  return { groups, beat, loadWatch, saveWatch, radarRows, page, WATCH_KEY };
+  return { groups, beat, loadWatch, saveWatch, radarRows, radarDates, page, WATCH_KEY };
 })();
 
 if (typeof module !== "undefined") module.exports = Today;

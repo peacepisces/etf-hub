@@ -3,8 +3,8 @@
 
 const app = document.getElementById("app");
 const state = { base: null, index: null, candles: {}, details: {}, live: null, stocks: {},
-                sort: { rank: { key: "ret.ytd", dir: -1 }, stock: { key: "w", dir: -1 }, tag: { key: "ret.ytd", dir: -1 }, hold: { key: "w", dir: -1 }, div: { key: "yield", dir: -1 }, act: { key: "v", dir: -1 }, radar: { key: "buy", dir: -1 } },
-                range: "m3", chartMode: "kline", site: {}, passive: false, div: { f: { kind: "high", freq: "" }, ym: null }, act: { period: "y1", sel: [], issuer: null }, track: { tab: "radar", q: "", mode: "all", osel: [] }, tab: "ops", hview: "stocks", filter: null, chart: null, cols: {} };
+                sort: { rank: { key: "ret", dir: -1 }, tools: { key: "ret", dir: -1 }, stock: { key: "w", dir: -1 }, tag: { key: "ret.ytd", dir: -1 }, hold: { key: "w", dir: -1 }, div: { key: "yield", dir: -1 }, act: { key: "v", dir: -1 }, radar: { key: "buy", dir: -1 } },
+                range: "m3", chartMode: "kline", site: {}, passive: false, div: { f: { kind: "high", freq: "" }, ym: null }, act: { period: "y1", sel: [], issuer: null }, track: { tab: "radar", q: "", mode: "all", osel: [] }, rk: { period: "ytd", chips: [] }, tools: { crit: {}, cmp: [] }, tab: "ops", hview: "stocks", filter: null, chart: null, cols: {} };
 // 即時：和舊版同一個轉接站、同樣頻率（web/app.js）；本機開發用本機轉接站
 const LIVE_URL = ["localhost", "127.0.0.1"].includes(location.hostname) ? "http://127.0.0.1:8787" : "https://etf-live.peacepisceslamb.workers.dev";
 const LIVE_EVERY_MS = 20000;
@@ -46,7 +46,10 @@ async function render() {
     if (!state.base) state.base = await Core.loadJson("overview.json");
     const o = current();
     let html, draw = null;
-    if (route === "rank") html = Pages.rank(o, state.sort.rank);
+    if (route === "rank") {
+      const [flows, fees] = await Promise.all([loadSite("flows.json"), loadSite("fees.json")]);
+      html = Rank.page(o, flows, fees, { ...state.rk, sort: state.sort.rank });
+    }
     else if (route === "holdings") {
       if (params.get("tab") && seq === 1) state.track.tab = params.get("tab");
       if (params.get("q") && !state.track.q) state.track.q = params.get("q");
@@ -69,7 +72,18 @@ async function render() {
       };
     }
     else if (route === "dividend") html = Div.page(await loadSite("dividends.json"), { ...state.div, sort: state.sort.div }, storage());
-    else if (route === "tools") html = Pages.tools();
+    else if (route === "tools") {
+      const [flows, fees] = await Promise.all([loadSite("flows.json"), loadSite("fees.json")]);
+      const cmp = state.tools.cmp;
+      const ds = cmp.length ? await Promise.all(cmp.concat("0050").map(loadDetail)) : [];
+      html = Tools.page(o, Rank.rows(o, flows, fees, "y1"), { ...state.tools, sort: state.sort.tools, range: state.range });
+      draw = () => {
+        const el = document.getElementById("tchart");
+        if (!el) return null;
+        return Chart.drawMulti(el, document.getElementById("tlegend"),
+          cmp.map((c, i) => ({ code: c, tri: ds[i] ? ds[i].tri : [] })), ds[cmp.length] ? ds[cmp.length].tri : [], state.range);
+      };
+    }
     else if (route === "tag") html = Pages.tag(o, args[0] || "", args[1] || "", state.sort.tag);
     else if (route === "etf") {
       const code = args[0] || "";
@@ -131,6 +145,16 @@ app.addEventListener("click", ev => {
     render();
     return;
   }
+  const rk = ev.target.closest("button[data-rind],button[data-rper],button[data-rchip],button[data-cmp-del]");
+  if (rk) {
+    const ds = rk.dataset;
+    if (ds.rind) state.sort.rank = { key: ds.rind, dir: ds.rind === "fee" ? 1 : -1 };   // 費用由低到高
+    if (ds.rper) state.rk.period = ds.rper;
+    if (ds.rchip) state.rk.chips = state.rk.chips.includes(ds.rchip) ? state.rk.chips.filter(c => c !== ds.rchip) : state.rk.chips.concat(ds.rchip);
+    if (ds.cmpDel) state.tools.cmp = state.tools.cmp.filter(c => c !== ds.cmpDel);
+    render();
+    return;
+  }
   const tk = ev.target.closest("button[data-ttab],button[data-mmode],button[data-ov-del]");
   if (tk) {
     if (tk.dataset.ttab) state.track.tab = tk.dataset.ttab;
@@ -167,6 +191,7 @@ app.addEventListener("click", ev => {
 });
 app.addEventListener("change", ev => {
   if (ev.target.matches("input[data-passive]")) { state.passive = ev.target.checked; render(); }
+  if (ev.target.matches("input[data-cmp]")) { state.tools.cmp = Act.toggle(state.tools.cmp, ev.target.dataset.cmp); render(); }
   if (ev.target.matches("input[data-asel]")) { state.act.sel = Act.toggle(state.act.sel, ev.target.dataset.asel); render(); }
   if (ev.target.matches("input[data-pf]")) {   // 組合勾選：預設 1 張
     const pf = Div.loadPf(storage()), c = ev.target.dataset.pf;
@@ -180,6 +205,22 @@ app.addEventListener("change", ev => {
   }
 });
 app.addEventListener("submit", ev => {
+  const sf = ev.target.closest("form[data-screen-form]");
+  if (sf) {
+    ev.preventDefault();
+    const n = v => v === "" ? null : Number(v);
+    state.tools.crit = { freq: sf.freq.value, type: sf.type.value, y1: n(sf.y1.value), aum: n(sf.aum.value), fee: n(sf.fee.value) };
+    render();
+    return;
+  }
+  const cf = ev.target.closest("form[data-cmp-form]");
+  if (cf) {
+    ev.preventDefault();
+    const code = (cf.code.value || "").trim().toUpperCase();
+    if (state.base.etfs.some(e => e.code === code) && !state.tools.cmp.includes(code)) state.tools.cmp = Act.toggle(state.tools.cmp, code);
+    render();
+    return;
+  }
   const mf = ev.target.closest("form[data-multi-form]");
   if (mf) { ev.preventDefault(); state.track.q = mf.q.value; render(); return; }
   const of = ev.target.closest("form[data-ov-form]");
@@ -239,7 +280,9 @@ async function pollLive() {
     if (!r.ok) return;
     state.live = await r.json();
   } catch (err) { return; }
-  if (state.base && Router.parse(location.hash).route === "today" && Live.isNewer(state.live, state.base.price_date)) { render(); return; }
+  // 正在輸入（加入關注、查詢）時不重畫，不然打到一半會被清掉（審查）
+  const typing = document.activeElement && document.activeElement.matches && document.activeElement.matches("#app input, #app select");
+  if (state.base && Router.parse(location.hash).route === "today" && Live.isNewer(state.live, state.base.price_date)) { if (!typing) render(); return; }
   if (!state.base || !shownCode || !Live.isNewer(state.live, state.base.price_date)) return;
   const e = current().etfs.find(x => x.code === shownCode);
   const px = document.getElementById("live-px"), chg = document.getElementById("live-chg"), asof = document.getElementById("live-asof");

@@ -22,11 +22,16 @@ const Div = (() => {
     for (let m = 1; m <= 12; m++) out[m] = { amount: 0, announced: false, items: [] };
     for (const [code, lots] of Object.entries(held || {})) {
       if (!(lots > 0)) continue;
-      const mine = calendar.filter(([d, c]) => c === code && d > from && d <= to);
-      const future = new Set(mine.filter(([d]) => d > today).map(([d]) => +d.slice(5, 7)));
-      for (const [d, , cash] of mine) {
+      // 每個月只算最新一次「有金額」的配息（已公告的取代去年同月；金額未公布的不取代；今年已除息就不再算去年同月）
+      const latest = new Map();
+      for (const row of calendar) {
+        const [d, c, cash] = row;
+        if (c !== code || d <= from || d > to || !(cash > 0)) continue;
         const m = +d.slice(5, 7);
-        if (d <= today && future.has(m)) continue;
+        if (!latest.has(m) || d > latest.get(m)[0]) latest.set(m, row);
+      }
+      for (const [d, , cash] of latest.values()) {
+        const m = +d.slice(5, 7);
         const amt = Math.round(cash * lots * 1000);
         out[m].amount += amt;
         out[m].items.push([code, d, amt]);

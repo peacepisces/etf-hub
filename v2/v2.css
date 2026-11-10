@@ -213,3 +213,13 @@ h2 { font-size: 16px; font-weight: 700; margin: 22px 0 8px; display: flex; align
 
 /* 持股追蹤（第 6 階段） */
 .big { font-size: 16px; margin: 12px 0 4px; } .big b { font-family: var(--mono); font-size: 22px; color: var(--accent); }
+
+/* 排行、工具（第 7 階段） */
+.rk-row { display: flex; gap: 10px; align-items: baseline; margin-bottom: 6px; }
+.rk-row .lb { font-size: 12px; color: var(--muted); width: 2.5em; flex: none; }
+.chips .sep { width: 1px; background: var(--line); margin: 0 4px; align-self: stretch; }
+.screener { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-top: 8px; font-size: 13px; color: var(--muted); }
+.screener label { display: inline-flex; gap: 6px; align-items: center; }
+.screener select, .screener input { font: inherit; background: var(--panel-2); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; }
+.screener input { width: 76px; }
+.screener button { font: inherit; background: var(--accent); color: var(--bg); border: 0; border-radius: 8px; padding: 4px 14px; cursor: pointer; font-weight: 600; }
