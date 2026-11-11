@@ -9,6 +9,10 @@ const state = { base: null, index: null, candles: {}, details: {}, live: null, s
 const LIVE_URL = ["localhost", "127.0.0.1"].includes(location.hostname) ? "http://127.0.0.1:8787" : "https://etf-live.peacepisceslamb.workers.dev";
 const LIVE_EVERY_MS = 20000;
 
+// 配色選單：換了就存起來、重畫（圖表顏色要重新讀）
+const skinEl = document.getElementById("skin");
+skinEl.innerHTML = Theme.options(Theme.saved());
+skinEl.addEventListener("change", () => { Theme.apply(skinEl.value); Theme.save(skinEl.value); render(); });
 document.getElementById("nav").innerHTML = Router.NAV.map(([k, l]) => `<a href="#/${k}" data-route="${k}">${l}</a>`).join("");
 
 async function loadIndex() {

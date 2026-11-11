@@ -12,7 +12,8 @@
   --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   color-scheme: dark;
 }
-@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {
+/* 配色（右上角「配色」選單，theme.js）：沒選＝跟系統（深色或淺色）；選了就用 data-theme 指定 */
+@media (prefers-color-scheme: light) { :root:not([data-theme]) {
   --bg: #f5f6f8; --panel: #ffffff; --panel-2: #f0f2f5; --line: #e1e4ea;
   --fg: #141920; --muted: #5c6677; --accent: #a8690f; --accent-bg: rgba(168,105,15,.14);
   --up: #d42a37; --down: #0f8a57; --up-bg: rgba(212,42,55,.08); --down-bg: rgba(15,138,87,.08);
@@ -20,6 +21,37 @@
   --t-ytd: #b07400; --t-y1: #2a78d6; --t-yld: #d6457f; --t-aum: #118c60;
   --d1: #2a78d6; --d2: #d6457f; --d3: #b07400; --d4: #118c60; --d-other: #c3c8d1;
   color-scheme: light } }
+:root[data-theme="light"] {
+  --bg: #f5f6f8; --panel: #ffffff; --panel-2: #f0f2f5; --line: #e1e4ea;
+  --fg: #141920; --muted: #5c6677; --accent: #a8690f; --accent-bg: rgba(168,105,15,.14);
+  --up: #d42a37; --down: #0f8a57; --up-bg: rgba(212,42,55,.08); --down-bg: rgba(15,138,87,.08);
+  --zebra: rgba(0,0,0,.025); --hover: #eef1f6;
+  --t-ytd: #b07400; --t-y1: #2a78d6; --t-yld: #d6457f; --t-aum: #118c60;
+  --d1: #2a78d6; --d2: #d6457f; --d3: #b07400; --d4: #118c60; --d-other: #c3c8d1;
+  color-scheme: light }
+/* 米色：淺色系、暖色紙張感，晚上看比較不刺眼 */
+:root[data-theme="warm"] {
+  --bg: #f3ead7; --panel: #fbf6eb; --panel-2: #efe4cd; --line: #ddcfb2;
+  --fg: #33291d; --muted: #6e5f4b; --accent: #8f520c; --accent-bg: rgba(143,82,12,.14);
+  --up: #b8282f; --down: #1d7346; --up-bg: rgba(184,40,47,.09); --down-bg: rgba(29,115,70,.09);
+  --zebra: rgba(80,50,0,.035); --hover: #f0e6d2;
+  --t-ytd: #a86c00; --t-y1: #2a6fc4; --t-yld: #c43f74; --t-aum: #107f57;
+  --d1: #2a6fc4; --d2: #c43f74; --d3: #a86c00; --d4: #107f57; --d-other: #cbbd9f;
+  color-scheme: light }
+/* 深藍：深色系、偏藍的底 */
+:root[data-theme="navy"] {
+  --bg: #0a1324; --panel: #101c33; --panel-2: #15233f; --line: #22314f;
+  --fg: #e4eaf5; --muted: #8d9cb8; --accent: #f0b54a; --accent-bg: rgba(240,181,74,.18);
+  --up: #ff6b70; --down: #3ccb8a; --up-bg: rgba(255,107,112,.13); --down-bg: rgba(60,203,138,.13);
+  --zebra: rgba(255,255,255,.03); --hover: #1a2a48;
+  color-scheme: dark }
+/* 高對比：純黑底、白字、亮色，字最清楚 */
+:root[data-theme="contrast"] {
+  --bg: #000000; --panel: #0b0b0b; --panel-2: #161616; --line: #4a4a4a;
+  --fg: #ffffff; --muted: #c7c7c7; --accent: #ffd24a; --accent-bg: rgba(255,210,74,.22);
+  --up: #ff6b6b; --down: #40e08f; --up-bg: rgba(255,107,107,.16); --down-bg: rgba(64,224,143,.16);
+  --zebra: rgba(255,255,255,.05); --hover: #222222;
+  color-scheme: dark }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; }
@@ -41,11 +73,12 @@ h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: .02em; white-
 .suggest a:hover, .suggest a.on { background: var(--panel-2); }
 .suggest .sub { color: var(--muted); font-size: 12px; white-space: nowrap; }
 .suggest .none { padding: 10px 12px; color: var(--muted); font-size: 13px; }
+.skin { font: inherit; font-size: 13px; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; cursor: pointer; }
 .nav { display: flex; gap: 6px; margin-top: 10px; overflow-x: auto; scrollbar-width: none; }
 .nav a { flex: 1; white-space: nowrap; text-align: center; font-size: 14px; font-weight: 500; color: var(--muted); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
 .nav a[aria-current="page"] { color: var(--bg); background: var(--accent); border-color: var(--accent); }
 @media (max-width: 640px) {
-  .search { flex: 1 1 100%; }
+  .search { flex: 1 1 100%; order: 3; }
   .nav a { flex: 0 0 auto; }
 }
 footer { margin-top: 32px; color: var(--muted); font-size: 12px; text-align: center; }

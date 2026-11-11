@@ -140,7 +140,7 @@ const Chart = (() => {
     const LC = globalThis.LightweightCharts;
     if (!LC) { el.innerHTML = '<p class="empty">圖表元件載入失敗，請重新整理</p>'; return { destroy() {} }; }
     const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-    const dark = !matchMedia("(prefers-color-scheme: light)").matches;
+    const dark = !Theme.isLight();
     const [up, down, fg, muted, line, panel] = ["--up", "--down", "--fg", "--muted", "--line", "--panel"].map(css);
     const chart = LC.createChart(el, {
       autoSize: true,
@@ -194,7 +194,7 @@ const Chart = (() => {
     const b = baseChart(el);
     if (!b) return { destroy() {} };
     const { LC, chart, css } = b;
-    const colors = MULTI[matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"];
+    const colors = MULTI[Theme.isLight() ? "light" : "dark"];
     const all = series.map(s => s.tri || []).filter(t => t.length);
     const last = all.reduce((m, t) => t[t.length - 1][0] > m ? t[t.length - 1][0] : m, "");
     const from = range === "all" || !last ? "" : startOfRange(last, range);
