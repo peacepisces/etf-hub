@@ -291,7 +291,8 @@ async function pollLive() {
   chg.innerHTML = Core.pct(e.chg_pct);
   const d1 = document.getElementById("live-d1");
   if (d1) d1.innerHTML = Core.pct(e.chg_pct);
-  asof.innerHTML = `<span class="live-tag">即時 ${Core.esc(state.live.time || "")}</span>`;
+  asof.innerHTML = `<span class="live-tag">即時 ${Core.esc(state.live.time || "")}</span>` +
+    (e.ex_today ? ` 今日除息 ${Core.num(e.exd[1], 3)}，漲跌和平盤價比` : "");
   if (state.tab === "holdings") { await refreshStocks(shownCode); updateHoldings(); }
 }
 setInterval(pollLive, LIVE_EVERY_MS);

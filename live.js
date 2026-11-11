@@ -25,7 +25,7 @@ const Live = (() => {
     return !!(live && live.date && (!priceDate || live.date > priceDate));
   }
 
-  // 價格←成交價；漲跌%←成交價÷前一天收盤；淨值←預估淨值；折溢價←證交所。沒有即時值的欄位保留收盤資料。
+  // 價格←成交價；漲跌%←成交價÷前一天收盤（除息日÷平盤價）；淨值←預估淨值；折溢價←證交所。沒有即時值的欄位保留收盤資料。
   function mergeOverview(overview, live) {
     if (!isNewer(live, overview.price_date)) return overview.etfs;
     return overview.etfs.map(e => {
@@ -35,8 +35,14 @@ const Live = (() => {
       const out = { ...e, live: true };
       if (isNum(p)) {
         out.price = p;
-        out.chg = isNum(e.price) ? round2(p - e.price) : null;
-        out.chg_pct = isNum(e.price) && e.price > 0 ? round2((p / e.price - 1) * 100) : null;
+        // 除息日：平盤價＝昨收 − 配息（證交所的參考價，00940 11/10 實際驗證），不然高股息會顯示假跌
+        let ref = e.price;
+        if (isNum(ref) && e.exd && e.exd[0] === live.date && isNum(e.exd[1])) {
+          ref = round2(ref - e.exd[1]);
+          out.ex_today = true;
+        }
+        out.chg = isNum(ref) ? round2(p - ref) : null;
+        out.chg_pct = isNum(ref) && ref > 0 ? round2((p / ref - 1) * 100) : null;
         if (isNum(e.ycash) && p > 0) out.yield = round2(e.ycash / p * 100);   // 殖利率跟著即時股價
       }
       if (isNum(nav)) out.nav = nav;
