@@ -45,10 +45,21 @@ const V2Table = (() => {
     const col = cols.find(c => c.key === s.key && c.get);
     const tops = colTops(rows, cols);
     const cls = (c, i, extra = "") => [i === 0 ? "sticky" : "", c.r ? "r num" : "", c.cls || "", extra].filter(Boolean).join(" ");
-    const head = cols.map((c, i) => {
+    const th = (c, i, extra = "") => {
       const on = col && c.key === col.key;
-      return `<th class="${cls(c, i, (c.get ? "sortable" : "") + (on ? " sorted" : ""))}"${c.get ? ` data-sort="${esc(c.key)}" data-table="${esc(id)}"` : ""}>${esc(c.label)}${on ? (s.dir > 0 ? " ▲" : " ▼") : ""}</th>`;
-    }).join("");
+      return `<th class="${cls(c, i, (c.get ? "sortable" : "") + (on ? " sorted" : ""))}"${extra}${c.get ? ` data-sort="${esc(c.key)}" data-table="${esc(id)}"` : ""}>${esc(c.label)}${on ? (s.dir > 0 ? " ▲" : " ▼") : ""}</th>`;
+    };
+    // opts.groups：[{label, keys}] 幾欄共用一個上層標題（例「2026 年」蓋 1～12 月）；其他欄跨兩列
+    const groupOf = new Map((opts.groups || []).flatMap(g => g.keys.map(k => [k, g])));
+    let head;
+    if (groupOf.size) {
+      const top = cols.map((c, i) => {
+        const g = groupOf.get(c.key);
+        if (!g) return th(c, i, ' rowspan="2"');
+        return g.keys[0] === c.key ? `<th colspan="${g.keys.length}" class="grp">${esc(g.label)}</th>` : "";
+      }).join("");
+      head = top + "</tr><tr>" + cols.map((c, i) => groupOf.has(c.key) ? th(c, i) : "").join("");
+    } else head = cols.map((c, i) => th(c, i)).join("");
     const body = sorted.map((row, i) => {
       const link = opts.rowLink ? ` class="link" data-href="${esc(opts.rowLink(row))}"` : "";
       const tags = cols.filter(c => tops.has(c.key) && tops.get(c.key).has(row))

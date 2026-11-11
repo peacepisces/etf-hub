@@ -55,25 +55,41 @@ const Div = (() => {
   function savePf(storage, pf) { try { storage.setItem(PF_KEY, JSON.stringify(pf)); return true; } catch { return false; } }
 
   // ---------- 畫面 ----------
-  // view：sum＝總覽（殖利率、含息報酬、填息…）；month＝每月配息（ETF、殖利率、頻率＋1～12 月，桌機一次看完 12 個月）
-  const VIEWS = [["sum", "總覽"], ["month", "每月配息"]];
-  function cols(year, pf, view) {
+  // title 屬性只能放純文字（pct 會產生 <span>，放進 title 會把引號弄壞）
+  const plainPct = v => isNum(v) ? `${v > 0 ? "+" : ""}${num(v)}%` : "—";
+
+  // 一張表放全部（使用者 2026-11-11：不要切換；參考別站把 1～12 月放在 ETF 旁邊、欄位窄一點）
+  // 順序：ETF｜1～12 月（上面「YYYY 年」群組標題）｜今年已配｜去年合計｜殖利率｜頻率｜含息報酬｜填息
+  function cols(year, pf) {
     const monthCols = Array.from({ length: 12 }, (_, i) => i + 1).map(m => ({
       key: `m${m}`, label: `${m} 月`, r: 1, cls: "mo", get: r => r.months[m] ? r.months[m].cash : null,
       html: r => r.months[m] ? `<span class="${r.months[m].announced ? "muted" : ""}">${num(r.months[m].cash, 3)}${r.months[m].announced ? "*" : ""}</span>` : "" }));
-    const all = [
-      { key: "name", label: "ETF", text: 1, get: r => r.name, html: r => `<input type="checkbox" data-pf="${esc(r.code)}" ${r.code in pf ? "checked" : ""} aria-label="加入組合">
-        <a href="#/etf/${encodeURIComponent(r.code)}">${esc(r.name)}</a><span class="code">${esc(r.code)}</span>` },
-      { key: "yield", label: "殖利率", r: 1, get: r => r.yield, html: r => isNum(r.yield) ? `${r.yield_est ? "預估 " : ""}${num(r.yield)}%` : dash, top: "yld", tag: "息" },
-      { key: "tr1y", label: "含息報酬（一年）", r: 1, get: r => r.tr1y,
-        html: r => `${pct(r.tr1y)}<div class="sub">價差 ${pct(r.price1y)}＋配息 ${pct(r.div1y)}</div>` },
-      { key: "freq", label: "頻率", get: r => r.freq, html: r => esc(FREQ[r.freq] || "—") },
-      { key: "ytd", label: `${year} 已配`, r: 1, get: r => r.ytd, html: r => r.ytd ? num(r.ytd, 3) : dash },
+    return [
+      { key: "name", label: "ETF", text: 1, get: r => r.name, html: r => `<label class="dn-name"><input type="checkbox" data-pf="${esc(r.code)}" ${r.code in pf ? "checked" : ""} aria-label="加入組合">
+        <span><a href="#/etf/${encodeURIComponent(r.code)}">${esc(r.name)}</a><span class="code">${esc(r.code)}</span></span></label>` },
+      ...monthCols,
+      { key: "ytd", label: `${year} 已配`, r: 1, cls: "sep", get: r => r.ytd, html: r => r.ytd ? num(r.ytd, 3) : dash },
       { key: "last_year", label: `${year - 1} 合計`, r: 1, get: r => r.last_year, html: r => r.last_year ? num(r.last_year, 3) : dash },
-      { key: "fill_avg", label: "填息天數", r: 1, get: r => r.fill_avg, html: r => isNum(r.fill_avg) ? `${num(r.fill_avg, 1)} 天` : dash },
+      { key: "yield", label: "殖利率", r: 1, get: r => r.yield, top: "yld", tag: "息",
+        html: r => isNum(r.yield) ? (r.yield_est ? `<span title="預估：上市未滿一年，用最近一次配息推算">${num(r.yield)}%<sup>估</sup></span>` : `${num(r.yield)}%`) : dash },
+      { key: "freq", label: "頻率", get: r => r.freq, html: r => esc(FREQ[r.freq] || "—") },
+      { key: "tr1y", label: "含息報酬", r: 1, get: r => r.tr1y,
+        html: r => `<span title="一年：價差 ${plainPct(r.price1y)}＋配息 ${plainPct(r.div1y)}">${pct(r.tr1y)}</span>` },
+      { key: "fill_avg", label: "填息", r: 1, get: r => r.fill_avg, html: r => isNum(r.fill_avg) ? `${num(r.fill_avg, 1)} 天` : dash },
     ];
-    if (view === "month") return [all[0], all[1], all[3], ...monthCols];
-    return all;
+  }
+
+  // 月月配搜尋：代號、完整名稱、下拉選單的「代號 名稱」、或只有一檔符合的部分名稱 → 代號；否則 null
+  function findEtf(etfs, q) {
+    q = String(q || "").trim();
+    if (!q) return null;
+    const head = q.split(/\s+/)[0].toUpperCase();
+    const byCode = etfs.find(e => e.code.toUpperCase() === head);
+    if (byCode) return byCode.code;
+    const exact = etfs.find(e => e.name === q);
+    if (exact) return exact.code;
+    const part = etfs.filter(e => e.name.includes(q) || e.code.toUpperCase().includes(q.toUpperCase()));
+    return part.length === 1 ? part[0].code : null;
   }
 
   function pfSection(data, pf) {
@@ -129,17 +145,20 @@ const Div = (() => {
     const chips = KINDS.map(([k, l]) => `<button type="button" data-dkind="${k}" aria-pressed="${st.f.kind === k}">${l}</button>`).join("");
     const fchips = [["", "全部頻率"], ...Object.entries(FREQ).filter(([k]) => k !== "0").reverse()].map(([k, l]) =>
       `<button type="button" data-dfreq="${k}" aria-pressed="${String(st.f.freq) === k}">${l}</button>`).join("");
-    const view = st.view === "month" ? "month" : "sum";
-    const vchips = VIEWS.map(([k, l]) => `<button type="button" data-dview="${k}" aria-pressed="${view === k}">${l}</button>`).join("");
-    const t = TB.render("div", cols(data.year, pf, view), rows, st.sort);
+    const t = TB.render("div", cols(data.year, pf), rows, st.sort,
+      { groups: [{ label: `${data.year} 年（依除息日）`, keys: Array.from({ length: 12 }, (_, i) => `m${i + 1}`) }] });
     const names = new Map(data.etfs.map(r => [r.code, r.name]));
+    const opts = data.etfs.map(r => `<option value="${esc(r.code)} ${esc(r.name)}">`).join("");
+    const search = `<form class="pf-add" data-pf-form><label>月月配組合：<input type="search" name="q" list="pf-list" placeholder="輸入代號或名稱，例 0056、高股息" autocomplete="off" enterkeyhint="done"></label>
+      <button type="submit">加入</button><span class="muted" data-pf-msg>${Object.keys(pf).length ? `已選 ${Object.keys(pf).length} 檔` : "也可以勾表格左邊的方塊"}</span>
+      <datalist id="pf-list">${opts}</datalist></form>`;
     return `<section class="card"><div class="chips">${chips}</div><div class="chips" style="margin-top:6px">${fchips}</div>
-      <div class="chips" style="margin-top:6px"><span class="muted" style="align-self:center;font-size:13px">表格：</span>${vchips}</div>
-      <p class="note">共 ${rows.length} 檔・含息報酬＝價差＋配息（價差是負的＝配息是從股價拿走的）・1～12 月依除息日，灰色加 * ＝已公告還沒除息・填息天數是近一年的平均</p></section>
-      ${t.html}${pfSection(data, pf)}${calendarSection(data, st.ym || data.today.slice(0, 7), names)}${pfBar(data, pf)}`;
+      ${search}
+      <p class="note">共 ${rows.length} 檔・1～12 月依除息日，灰色加 * ＝已公告還沒除息・殖利率「估」＝上市未滿一年的預估・含息報酬（一年）＝價差＋配息，滑鼠移上去看拆解・填息是近一年平均天數</p></section>
+      ${t.html.replace('class="tbl-wrap"', 'class="tbl-wrap div-tbl"')}${pfSection(data, pf)}${calendarSection(data, st.ym || data.today.slice(0, 7), names)}${pfBar(data, pf)}`;
   }
 
-  return { filter, portfolio, portfolioTotal, calendarDays, loadPf, savePf, page, shift, pfBar };
+  return { filter, portfolio, portfolioTotal, calendarDays, loadPf, savePf, page, shift, pfBar, findEtf };
 })();
 
 if (typeof module !== "undefined") module.exports = Div;

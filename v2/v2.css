@@ -205,6 +205,24 @@ h2 { font-size: 16px; font-weight: 700; margin: 22px 0 8px; display: flex; align
 .cal-c a { color: var(--fg); text-decoration: none; font-family: var(--mono); white-space: nowrap; } .cal-c a i { color: var(--muted); font-style: normal; }
 .chips b { align-self: center; font-size: 14px; }
 @media (max-width: 600px) { .pf-months { grid-template-columns: repeat(3, 1fr); } .cal-c { min-height: 54px; } .cal-c a i { display: none; } }
+/* 配息表：一張表放 1～12 月＋其他欄，欄位縮窄（使用者 2026-11-11） */
+.tbl th.grp { text-align: center; color: var(--fg); border-left: 1px solid var(--line); padding: 6px 4px; }
+.div-tbl .tbl { font-size: 12.5px; }
+.div-tbl .tbl th, .div-tbl .tbl td { padding: 6px 5px; }
+.div-tbl .tbl td { font-family: var(--mono); }
+.div-tbl .tbl td.sticky { font-family: inherit; }
+.div-tbl .tbl .mo { min-width: 40px; padding: 6px 3px; }
+.div-tbl .tbl th.mo { text-align: center; }
+.div-tbl .tbl .sep { border-left: 1px solid var(--line); }
+.div-tbl .tbl sup { font-size: 9px; color: var(--accent); margin-left: 1px; }
+.dn-name { display: flex; align-items: flex-start; gap: 6px; cursor: pointer; }
+.dn-name input { margin-top: 2px; }
+.dn-name > span { display: flex; flex-direction: column; line-height: 1.25; }
+.dn-name .code { margin-left: 0; font-size: 11px; }
+.dn-name a { color: var(--fg); text-decoration: none; } .dn-name a:hover { text-decoration: underline; }
+.pf-add { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; font-size: 13px; }
+.pf-add input { font: inherit; width: min(300px, 70vw); background: var(--panel-2); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; margin-left: 4px; }
+.pf-add button { font: inherit; color: var(--bg); background: var(--accent); border: 0; border-radius: 8px; padding: 6px 14px; cursor: pointer; }
 /* 組合底部小條：固定在畫面底部；#pf 捲過去時不被頁首蓋住 */
 #pf { scroll-margin-top: 120px; }
 main:has(.pf-bar) { padding-bottom: 96px; }
