@@ -4,7 +4,7 @@
 const app = document.getElementById("app");
 const state = { base: null, index: null, candles: {}, details: {}, live: null, stocks: {},
                 sort: { rank: { key: "ret", dir: -1 }, tools: { key: "ret", dir: -1 }, stock: { key: "w", dir: -1 }, tag: { key: "ret.ytd", dir: -1 }, hold: { key: "w", dir: -1 }, div: { key: "yield", dir: -1 }, act: { key: "v", dir: -1 }, radar: { key: "buy", dir: -1 } },
-                range: "m3", chartMode: "kline", site: {}, passive: false, div: { f: { kind: "high", freq: "" }, ym: null }, act: { period: "y1", sel: [], issuer: null }, track: { tab: "radar", q: "", mode: "all", osel: [] }, rk: { period: "ytd", chips: [] }, tools: { crit: {}, cmp: [] }, tab: "ops", hview: "stocks", filter: null, chart: null, cols: {}, etfNav: null };
+                range: "m3", chartMode: "kline", site: {}, passive: false, div: { f: { kind: "high", freq: "" }, ym: null, view: "sum" }, act: { period: "y1", sel: [], issuer: null }, track: { tab: "radar", q: "", mode: "all", osel: [] }, rk: { period: "ytd", chips: [] }, tools: { crit: {}, cmp: [] }, tab: "ops", hview: "stocks", filter: null, chart: null, cols: {}, etfNav: null };
 // 即時：和舊版同一個轉接站、同樣頻率（web/app.js）；本機開發用本機轉接站
 const LIVE_URL = ["localhost", "127.0.0.1"].includes(location.hostname) ? "http://127.0.0.1:8787" : "https://etf-live.peacepisceslamb.workers.dev";
 const LIVE_EVERY_MS = 20000;
@@ -189,11 +189,12 @@ app.addEventListener("click", ev => {
     render();
     return;
   }
-  const dv = ev.target.closest("button[data-dkind],button[data-dfreq],button[data-cal],button[data-pf-del]");
+  const dv = ev.target.closest("button[data-dkind],button[data-dfreq],button[data-dview],button[data-cal],button[data-pf-del]");
   if (dv) {
     const ds = dv.dataset;
     if (ds.dkind) state.div.f.kind = ds.dkind;
     if (ds.dfreq !== undefined) state.div.f.freq = ds.dfreq;
+    if (ds.dview) state.div.view = ds.dview;
     if (ds.cal) {
       const base = state.div.ym || (state.site["dividends.json"] || {}).today?.slice(0, 7) || new Date().toISOString().slice(0, 7);
       const [y, m] = base.split("-").map(Number), t = new Date(Date.UTC(y, m - 1 + Number(ds.cal), 1));
@@ -203,6 +204,7 @@ app.addEventListener("click", ev => {
     render();
     return;
   }
+  if (ev.target.closest("button[data-pf-jump]")) { document.getElementById("pf")?.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
   const un = ev.target.closest("button[data-unwatch]");
   if (un) { ev.preventDefault(); Today.saveWatch(storage(), Today.loadWatch(storage()).filter(c => c !== un.dataset.unwatch)); render(); return; }
   if (ev.target.closest("a[data-aclear]")) { ev.preventDefault(); state.act.sel = []; render(); return; }

@@ -205,6 +205,20 @@ h2 { font-size: 16px; font-weight: 700; margin: 22px 0 8px; display: flex; align
 .cal-c a { color: var(--fg); text-decoration: none; font-family: var(--mono); white-space: nowrap; } .cal-c a i { color: var(--muted); font-style: normal; }
 .chips b { align-self: center; font-size: 14px; }
 @media (max-width: 600px) { .pf-months { grid-template-columns: repeat(3, 1fr); } .cal-c { min-height: 54px; } .cal-c a i { display: none; } }
+/* 組合底部小條：固定在畫面底部；#pf 捲過去時不被頁首蓋住 */
+#pf { scroll-margin-top: 120px; }
+main:has(.pf-bar) { padding-bottom: 96px; }
+.pf-bar { position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 20; width: min(720px, calc(100% - 32px));
+  display: flex; align-items: center; gap: 12px; background: var(--panel); border: 1px solid var(--accent); border-radius: 12px;
+  padding: 8px 12px; box-shadow: 0 6px 24px rgba(0,0,0,.35); font-size: 13px; }
+.pf-bar-sum { white-space: nowrap; } .pf-bar-sum b { font-family: var(--mono); color: var(--accent); }
+.pf-bar-ms { flex: 1; display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; height: 40px; min-width: 0; }
+.pf-bar-m { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; }
+.pf-bar-m i { display: block; width: 100%; max-width: 14px; background: var(--accent); border-radius: 2px 2px 0 0; }
+.pf-bar-m.zero i { background: var(--line); }
+.pf-bar-m em { font-style: normal; font-size: 9px; color: var(--muted); line-height: 1.2; font-family: var(--mono); }
+.pf-bar button { white-space: nowrap; font: inherit; color: var(--accent); background: none; border: 1px solid var(--accent); border-radius: 8px; padding: 4px 10px; cursor: pointer; }
+@media (max-width: 600px) { .pf-bar { flex-wrap: wrap; gap: 6px 10px; } .pf-bar-ms { order: 3; flex-basis: 100%; height: 34px; } }
 
 /* 主動式（第 5 階段） */
 .legend .lg { font: inherit; font-family: var(--mono); font-size: 12px; background: none; border: 0; color: var(--fg); cursor: pointer; padding: 0 6px 0 0; }
