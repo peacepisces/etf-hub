@@ -8,7 +8,7 @@ const Div = (() => {
   const { esc, isNum, dash, num, pct } = C;
   const PF_KEY = "v2.portfolio";
   const FREQ = { 12: "月配", 6: "雙月配", 4: "季配", 2: "半年配", 1: "年配", 0: "不配息" };
-  const KINDS = [["high", "高股息"], ["all", "全部配息 ETF"], ["active", "主動式"], ["bond", "債券"]];
+  const KINDS = [["all", "全部配息 ETF"], ["high", "高股息"], ["active", "主動式"], ["bond", "債券"]];   // 全部在最左（使用者 2026-11-11）
 
   function filter(rows, f) {
     return rows.filter(r => (f.kind === "high" ? r.type === "高股息" : f.kind === "active" ? r.mgmt === "主動"
@@ -71,7 +71,7 @@ const Div = (() => {
       { key: "ytd", label: `${year} 已配`, r: 1, cls: "sep", get: r => r.ytd, html: r => r.ytd ? num(r.ytd, 3) : dash },
       { key: "last_year", label: `${year - 1} 合計`, r: 1, get: r => r.last_year, html: r => r.last_year ? num(r.last_year, 3) : dash },
       { key: "yield", label: "殖利率", r: 1, get: r => r.yield, top: "yld", tag: "息",
-        html: r => isNum(r.yield) ? (r.yield_est ? `<span title="預估：上市未滿一年，用最近一次配息推算">${num(r.yield)}%<sup>估</sup></span>` : `${num(r.yield)}%`) : dash },
+        html: r => isNum(r.yield) ? (r.yield_est ? `<span title="預估：上市未滿一年，用最近一次配息推算">${num(r.yield)}%<sup>估</sup></span>` : `${num(r.yield)}%`) : r.no_div ? '<span class="muted">尚未配息</span>' : dash },
       { key: "freq", label: "頻率", get: r => r.freq, html: r => esc(FREQ[r.freq] || "—") },
       { key: "tr1y", label: "含息報酬", r: 1, get: r => r.tr1y,
         html: r => `<span title="一年：價差 ${plainPct(r.price1y)}＋配息 ${plainPct(r.div1y)}">${pct(r.tr1y)}</span>` },
