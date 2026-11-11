@@ -92,31 +92,58 @@ const Div = (() => {
     return part.length === 1 ? part[0].code : null;
   }
 
-  function pfSection(data, pf) {
-    const codes = Object.keys(pf);
-    if (!codes.length) return `<section class="card"><h2>組合（月月配規劃）</h2><p class="empty">勾選表格左邊的方塊加入組合，再輸入張數</p></section>`;
+  // 組合面板（使用者 2026-11-11）：固定在畫面底部，平常是一條摘要，點「展開」往上變成面板：
+  // 搜尋加入、改張數、每檔本金（現價 × 張數 × 1000，未含手續費）、年股利、殖利率、每月股利。表格還在後面可以繼續勾，不用捲來捲去。
+  // prices：{代號: 最新價}（overview.json，盤中有即時價就用即時）
+  function pfRows(data, pf, prices, m) {
     const names = new Map(data.etfs.map(r => [r.code, r.name]));
-    const m = portfolio(data.calendar, pf, data.today);
-    const inputs = codes.map(c => `<label class="pf-item">${esc(names.get(c) || c)}<span class="code">${esc(c)}</span>
-      <input type="number" min="0" step="1" value="${Number(pf[c]) || 0}" data-pf-lots="${esc(c)}"> 張
-      <button type="button" data-pf-del="${esc(c)}" aria-label="移除">×</button></label>`).join("");
-    const months = Array.from({ length: 12 }, (_, i) => i + 1).map(i => `<div class="pf-m${m[i].amount ? "" : " zero"}"><span>${i} 月</span>
-      <b>${m[i].amount ? num(m[i].amount, 0) : "—"}${m[i].announced ? "*" : ""}</b></div>`).join("");
-    return `<section class="card" id="pf"><h2>組合（月月配規劃）</h2><div class="pf-items">${inputs}</div>
-      <div class="pf-months">${months}</div><p class="meta">一年合計約 <b>${num(portfolioTotal(m), 0)}</b> 元</p>
-      <p class="note">依近 12 個月實際配息（除息月份）× 張數估算；* 含已公告、還沒除息的那次（取代去年同月）。發放日沒有公開資料可程式取得，實際入帳通常晚除息 3～4 週。組合只存在這台裝置的瀏覽器</p></section>`;
+    const divs = {};
+    for (const x of Object.values(m)) for (const [c, , amt] of x.items) divs[c] = (divs[c] || 0) + amt;
+    return Object.keys(pf).map(code => {
+      const lots = Math.max(0, Math.floor(Number(pf[code]) || 0)), price = prices ? prices[code] : null;
+      const cost = isNum(price) ? Math.round(price * lots * 1000) : null, div = divs[code] || 0;
+      return { code, name: names.get(code) || "", lots, price: isNum(price) ? price : null, cost, div,
+               yld: cost ? div / cost * 100 : null };
+    });
   }
 
-  // 底部固定小條：組合區在長表格下面，勾了看不到（使用者 2026-11-11）。勾第一檔起一直顯示，點「看詳細」捲到組合區
-  function pfBar(data, pf) {
+  function pfDock(data, pf, open, prices) {
     const codes = Object.keys(pf);
-    if (!codes.length) return "";
     const m = portfolio(data.calendar, pf, data.today);
+    const total = portfolioTotal(m);
+    const rows = pfRows(data, pf, prices, m);
+    const known = rows.filter(r => r.cost !== null);
+    const cost = known.reduce((s, r) => s + r.cost, 0);
     const max = Math.max(1, ...Object.values(m).map(x => x.amount));
     const bars = Array.from({ length: 12 }, (_, i) => i + 1).map(i =>
       `<span class="pf-bar-m${m[i].amount ? "" : " zero"}" title="${i} 月 ${m[i].amount ? num(m[i].amount, 0) + " 元" : "—"}"><i style="height:${m[i].amount ? Math.max(12, Math.round(m[i].amount / max * 100)) : 4}%"></i><em>${i}</em></span>`).join("");
-    return `<div class="pf-bar" role="region" aria-label="組合摘要"><div class="pf-bar-sum">組合 ${codes.length} 檔・一年約 <b>${num(portfolioTotal(m), 0)}</b> 元</div>
-      <div class="pf-bar-ms">${bars}</div><button type="button" data-pf-jump>看詳細 ↓</button></div>`;
+    const sum = codes.length
+      ? `組合 ${codes.length} 檔・本金約 <b>${num(cost, 0)}</b>・一年股利約 <b>${num(total, 0)}</b> 元`
+      : `月月配組合：勾表格左邊的方塊，或展開後搜尋加入`;
+    const bar = `<div class="pf-bar"><div class="pf-bar-sum">${sum}</div>${codes.length ? `<div class="pf-bar-ms">${bars}</div>` : ""}
+      <button type="button" data-pf-toggle aria-expanded="${open}">${open ? "▼ 收起" : "▲ 展開"}</button></div>`;
+    if (!open) return `<div class="pf-dock" role="region" aria-label="月月配組合">${bar}</div>`;
+
+    const opts = data.etfs.map(r => `<option value="${esc(r.code)} ${esc(r.name)}">`).join("");
+    const search = `<form class="pf-add" data-pf-form><input type="search" name="q" list="pf-list" placeholder="搜尋加入：代號或名稱，例 00878" autocomplete="off" enterkeyhint="done" aria-label="搜尋 ETF 加入組合">
+      <button type="submit">加入</button><span class="muted" data-pf-msg></span><datalist id="pf-list">${opts}</datalist></form>`;
+    const money = v => v === null ? dash : num(v, 0);
+    const body = rows.map(r => `<tr><td class="code-c"><a href="#/etf/${encodeURIComponent(r.code)}">${esc(r.code)}</a></td><td class="name-c">${esc(r.name)}</td>
+      <td class="r"><input type="number" min="0" step="1" inputmode="numeric" value="${r.lots}" data-pf-lots="${esc(r.code)}" aria-label="${esc(r.code)} 張數"> 張</td>
+      <td class="r num px-c">${r.price === null ? dash : num(r.price)}</td><td class="r num">${money(r.cost)}</td><td class="r num">${num(r.div, 0)}</td>
+      <td class="r num">${isNum(r.yld) ? num(r.yld) + "%" : dash}</td>
+      <td><button type="button" class="pf-del" data-pf-del="${esc(r.code)}" aria-label="移除 ${esc(r.code)}">×</button></td></tr>`).join("");
+    const knownDiv = known.reduce((s, r) => s + r.div, 0);
+    const foot = rows.length ? `<tfoot><tr><td colspan="3">合計${known.length < rows.length ? `（${rows.length - known.length} 檔沒有價格，本金沒算進去）` : ""}</td>
+      <td class="px-c"></td><td class="r num">${num(cost, 0)}</td><td class="r num">${num(total, 0)}</td><td class="r num">${cost ? num(knownDiv / cost * 100) + "%" : dash}</td><td></td></tr></tfoot>` : "";
+    const table = rows.length
+      ? `<div class="pf-tbl-wrap"><table class="pf-tbl"><thead><tr><th>代號</th><th>名稱</th><th class="r">張數</th><th class="r px-c">現價</th><th class="r">本金</th><th class="r">年股利</th><th class="r">殖利率</th><th></th></tr></thead><tbody>${body}</tbody>${foot}</table></div>`
+      : `<p class="empty">還沒有 ETF：上面搜尋，或勾表格左邊的方塊</p>`;
+    const months = Array.from({ length: 12 }, (_, i) => i + 1).map(i => `<div class="pf-m${m[i].amount ? "" : " zero"}"><span>${i} 月</span>
+      <b>${m[i].amount ? num(m[i].amount, 0) : "—"}${m[i].announced ? "*" : ""}</b></div>`).join("");
+    return `<div class="pf-dock open" role="region" aria-label="月月配組合">${bar}<div class="pf-body">${search}${table}
+      ${rows.length ? `<div class="pf-months">${months}</div>` : ""}
+      <p class="note">本金＝最新價 × 張數 × 1000 股，未含手續費。股利依近 12 個月實際配息（除息月份）× 張數估算；* 含已公告、還沒除息的那次。實際入帳通常晚除息 3～4 週。組合只存在這台裝置的瀏覽器</p></div></div>`;
   }
 
   function calendarSection(data, ym, names) {
@@ -138,7 +165,7 @@ const Div = (() => {
       <p class="note">每格最多列 4 檔（代號 每單位配息）；? ＝金額未公布</p></section>`;
   }
 
-  function page(data, st, storage) {
+  function page(data, st, storage, prices) {
     if (!data) return '<p class="empty">配息資料還沒產生</p>';
     const pf = loadPf(storage);
     const rows = filter(data.etfs, st.f);
@@ -148,17 +175,12 @@ const Div = (() => {
     const t = TB.render("div", cols(data.year, pf), rows, st.sort,
       { groups: [{ label: `${data.year} 年（依除息日）`, keys: Array.from({ length: 12 }, (_, i) => `m${i + 1}`) }] });
     const names = new Map(data.etfs.map(r => [r.code, r.name]));
-    const opts = data.etfs.map(r => `<option value="${esc(r.code)} ${esc(r.name)}">`).join("");
-    const search = `<form class="pf-add" data-pf-form><label>月月配組合：<input type="search" name="q" list="pf-list" placeholder="輸入代號或名稱，例 0056、高股息" autocomplete="off" enterkeyhint="done"></label>
-      <button type="submit">加入</button><span class="muted" data-pf-msg>${Object.keys(pf).length ? `已選 ${Object.keys(pf).length} 檔` : "也可以勾表格左邊的方塊"}</span>
-      <datalist id="pf-list">${opts}</datalist></form>`;
     return `<section class="card"><div class="chips">${chips}</div><div class="chips" style="margin-top:6px">${fchips}</div>
-      ${search}
-      <p class="note">共 ${rows.length} 檔・1～12 月依除息日，灰色加 * ＝已公告還沒除息・殖利率「估」＝上市未滿一年的預估・含息報酬（一年）＝價差＋配息，滑鼠移上去看拆解・填息是近一年平均天數</p></section>
-      ${t.html.replace('class="tbl-wrap"', 'class="tbl-wrap div-tbl"')}${pfSection(data, pf)}${calendarSection(data, st.ym || data.today.slice(0, 7), names)}${pfBar(data, pf)}`;
+      <p class="note">共 ${rows.length} 檔・勾左邊方塊加入畫面下方的月月配組合・1～12 月依除息日，灰色加 * ＝已公告還沒除息・殖利率「估」＝上市未滿一年的預估・含息報酬（一年）＝價差＋配息，滑鼠移上去看拆解・填息是近一年平均天數</p></section>
+      ${t.html.replace('class="tbl-wrap"', 'class="tbl-wrap div-tbl"')}${calendarSection(data, st.ym || data.today.slice(0, 7), names)}${pfDock(data, pf, !!st.pfOpen, prices)}`;
   }
 
-  return { filter, portfolio, portfolioTotal, calendarDays, loadPf, savePf, page, shift, pfBar, findEtf };
+  return { filter, portfolio, portfolioTotal, calendarDays, loadPf, savePf, page, shift, pfDock, pfRows, findEtf };
 })();
 
 if (typeof module !== "undefined") module.exports = Div;

@@ -75,7 +75,8 @@ async function render() {
           state.act.sel.map(c => ({ code: c, name: names.get(c), tri: adata.tri[c] })), adata.tri["0050"], state.range);
       };
     }
-    else if (route === "dividend") html = Div.page(await loadSite("dividends.json"), { ...state.div, sort: state.sort.div }, storage());
+    else if (route === "dividend") html = Div.page(await loadSite("dividends.json"), { ...state.div, sort: state.sort.div }, storage(),
+      Object.fromEntries(o.etfs.map(e => [e.code, e.price])));
     else if (route === "tools") {
       const [flows, fees] = await Promise.all([loadSite("flows.json"), loadSite("fees.json")]);
       const cmp = state.tools.cmp;
@@ -207,7 +208,7 @@ app.addEventListener("click", ev => {
     render();
     return;
   }
-  if (ev.target.closest("button[data-pf-jump]")) { document.getElementById("pf")?.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
+  if (ev.target.closest("button[data-pf-toggle]")) { state.div.pfOpen = !state.div.pfOpen; render(); return; }
   const un = ev.target.closest("button[data-unwatch]");
   if (un) { ev.preventDefault(); Today.saveWatch(storage(), Today.loadWatch(storage()).filter(c => c !== un.dataset.unwatch)); render(); return; }
   if (ev.target.closest("a[data-aclear]")) { ev.preventDefault(); state.act.sel = []; render(); return; }
@@ -240,7 +241,8 @@ app.addEventListener("submit", ev => {
     const pf = Div.loadPf(storage());
     pf[code] = pf[code] || 1;
     Div.savePf(storage(), pf);
-    render();
+    // 加完游標留在搜尋框，可以直接打下一檔
+    render().then(() => document.querySelector("form[data-pf-form] input[name=q]")?.focus());
     return;
   }
   const sf = ev.target.closest("form[data-screen-form]");

@@ -223,10 +223,6 @@ h2 { font-size: 16px; font-weight: 700; margin: 22px 0 8px; display: flex; align
 .evlist .dt { font-size: 12px; color: var(--muted); white-space: nowrap; }
 
 /* 配息頁（第 4 階段） */
-.pf-items { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-.pf-item { display: inline-flex; align-items: center; gap: 6px; background: var(--panel-2); border-radius: 8px; padding: 4px 8px; font-size: 13px; }
-.pf-item input { width: 64px; font: inherit; background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; }
-.pf-item button { background: none; border: 0; color: var(--muted); cursor: pointer; }
 .pf-months { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-top: 10px; }
 .pf-m { background: var(--panel-2); border-radius: 8px; padding: 6px 8px; display: flex; flex-direction: column; }
 .pf-m span { font-size: 12px; color: var(--muted); } .pf-m b { font-family: var(--mono); } .pf-m.zero b { color: var(--muted); font-weight: 400; }
@@ -256,20 +252,39 @@ h2 { font-size: 16px; font-weight: 700; margin: 22px 0 8px; display: flex; align
 .pf-add { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; font-size: 13px; }
 .pf-add input { font: inherit; width: min(300px, 70vw); background: var(--panel-2); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; margin-left: 4px; }
 .pf-add button { font: inherit; color: var(--bg); background: var(--accent); border: 0; border-radius: 8px; padding: 6px 14px; cursor: pointer; }
-/* 組合底部小條：固定在畫面底部；#pf 捲過去時不被頁首蓋住 */
-#pf { scroll-margin-top: 120px; }
-main:has(.pf-bar) { padding-bottom: 96px; }
-.pf-bar { position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 20; width: min(720px, calc(100% - 32px));
-  display: flex; align-items: center; gap: 12px; background: var(--panel); border: 1px solid var(--accent); border-radius: 12px;
-  padding: 8px 12px; box-shadow: 0 6px 24px rgba(0,0,0,.35); font-size: 13px; }
+/* 組合：固定在畫面底部，平常一條摘要，展開往上變面板（表格還在後面可以繼續勾；使用者 2026-11-11） */
+main:has(.pf-dock) { padding-bottom: 96px; }
+main:has(.pf-dock.open) { padding-bottom: 70vh; }
+.pf-dock { position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 20; width: min(960px, calc(100% - 32px));
+  background: var(--panel); border: 1px solid var(--accent); border-radius: 12px; box-shadow: 0 6px 24px rgba(0,0,0,.35); font-size: 13px;
+  display: flex; flex-direction: column; max-height: calc(100vh - 140px); }
+.pf-bar { display: flex; align-items: center; gap: 12px; padding: 8px 12px; }
 .pf-bar-sum { white-space: nowrap; } .pf-bar-sum b { font-family: var(--mono); color: var(--accent); }
 .pf-bar-ms { flex: 1; display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; height: 40px; min-width: 0; }
 .pf-bar-m { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; }
 .pf-bar-m i { display: block; width: 100%; max-width: 14px; background: var(--accent); border-radius: 2px 2px 0 0; }
 .pf-bar-m.zero i { background: var(--line); }
 .pf-bar-m em { font-style: normal; font-size: 9px; color: var(--muted); line-height: 1.2; font-family: var(--mono); }
-.pf-bar button { white-space: nowrap; font: inherit; color: var(--accent); background: none; border: 1px solid var(--accent); border-radius: 8px; padding: 4px 10px; cursor: pointer; }
-@media (max-width: 600px) { .pf-bar { flex-wrap: wrap; gap: 6px 10px; } .pf-bar-ms { order: 3; flex-basis: 100%; height: 34px; } }
+.pf-bar button { margin-left: auto; white-space: nowrap; font: inherit; color: var(--accent); background: none; border: 1px solid var(--accent); border-radius: 8px; padding: 4px 10px; cursor: pointer; }
+.pf-body { overflow-y: auto; max-height: 60vh; padding: 0 12px 12px; border-top: 1px solid var(--line); }
+.pf-body .pf-add { margin-top: 10px; }
+.pf-tbl-wrap { overflow-x: auto; margin-top: 8px; }
+.pf-tbl { width: 100%; border-collapse: collapse; }
+.pf-tbl th { font-size: 12px; font-weight: 500; color: var(--muted); text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.pf-tbl td { padding: 4px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.pf-tbl .r { text-align: right; }
+.pf-tbl .code-c a { font-family: var(--mono); font-weight: 600; color: var(--accent); }
+.pf-tbl .name-c { white-space: normal; min-width: 7em; }
+.pf-tbl input { width: 70px; font: inherit; font-family: var(--mono); text-align: right; background: var(--panel-2); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; }
+.pf-tbl tfoot td { font-weight: 700; border-bottom: 0; }
+.pf-del { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 15px; }
+.pf-del:hover { color: var(--up); }
+.pf-body .pf-months { grid-template-columns: repeat(12, 1fr); }
+.pf-body .pf-m { padding: 4px 6px; } .pf-body .pf-m b { font-size: 12px; }
+@media (max-width: 900px) { .pf-body .pf-months { grid-template-columns: repeat(6, 1fr); } }
+@media (max-width: 600px) { .pf-bar { flex-wrap: wrap; gap: 6px 10px; } .pf-bar-sum { white-space: normal; } .pf-bar-ms { order: 3; flex-basis: 100%; height: 34px; }
+  .pf-tbl .px-c { display: none; }   /* 手機：現價不顯示，本金、年股利、殖利率放得下 */
+  .pf-dock { bottom: 8px; width: calc(100% - 16px); } .pf-body { max-height: 65vh; } .pf-body .pf-months { grid-template-columns: repeat(4, 1fr); } }
 
 /* 主動式（第 5 階段） */
 .legend .lg { font: inherit; font-family: var(--mono); font-size: 12px; background: none; border: 0; color: var(--fg); cursor: pointer; padding: 0 6px 0 0; }
