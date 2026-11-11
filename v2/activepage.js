@@ -57,7 +57,7 @@ const Act = (() => {
     const plabel = (PERIODS.find(x => x[0] === p) || [, ""])[1];
     const flowLabel = { d1: "今日", w1: "近 1 週", m1: "近 1 月" }[list[0] ? list[0].flowKey : "m1"];
     const cols = [
-      { key: "name", label: "ETF", text: 1, get: r => r.name, html: r => `<input type="checkbox" data-asel="${esc(r.code)}" ${st.sel.includes(r.code) ? "checked" : ""} aria-label="加入走勢圖">
+      { key: "name", label: "ETF", text: 1, get: r => r.name, html: r => `<input type="checkbox" data-asel="${esc(r.code)}" ${st.sel.includes(r.code) ? "checked" : ""} aria-label="加入下方報酬走勢圖" title="加入下方 B. 報酬走勢圖">
         <a href="#/etf/${encodeURIComponent(r.code)}">${esc(r.name)}</a><span class="code">${esc(r.code)}</span>` },
       { key: "v", label: plabel, r: 1, get: r => r.v, html: r => pct(r.v), top: "ytd", tag: "報酬" },
       { key: "vs", label: "vs 0050", r: 1, get: r => r.vs, html: r => pct(r.vs) },
@@ -77,7 +77,8 @@ const Act = (() => {
     const chips2 = Chart.RANGES.map(([k, l]) => `<button type="button" data-range="${k}" aria-pressed="${k === st.range}">${l}</button>`).join("");
     return `<section class="card"><div class="tc-head"><h2>A. 績效 vs 0050</h2><span class="meta">${plabel}贏 0050：<b>${win}/${tot}</b> 檔</span></div>
         <div class="chips">${chips}</div>
-        <p class="note">報酬含息・期間是滾動計算・上市以來和 0050 比同一段期間（不滿一年是累積、滿一年年化）・資金流向＝受益權單位數變化×淨值，* ＝資料從 11/05 起、不滿整段・勾選左邊加入下方走勢圖（最多 ${MAX} 檔）</p></section>
+        <p class="hint">☑ 左邊打勾的 ETF 會畫進下方「B. 報酬走勢」，和 0050 比較走勢（已選 ${st.sel.length}/${MAX}，<a href="#/active" data-aclear="1">全部取消</a>）</p>
+        <p class="note">報酬含息・期間是滾動計算・上市以來和 0050 比同一段期間（不滿一年是累積、滿一年年化）・資金流向＝受益權單位數變化×淨值，* ＝資料從 11/05 起、不滿整段</p></section>
       ${t.html}
       <section class="card"><div class="tc-head"><h2>B. 報酬走勢</h2><div class="chips">${chips2}</div></div>
         ${st.sel.length ? `<div class="legend" id="alegend"></div><div class="chart" id="achart"></div>` : '<p class="empty">在上面的表格勾選 ETF（最多 8 檔），和 0050 一起比較</p>'}

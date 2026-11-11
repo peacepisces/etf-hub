@@ -43,7 +43,7 @@ const Detail = (() => {
       <h2>${esc(e.name)}<span class="code">${esc(e.code)}</span></h2>
       <div class="tags2">${tags}</div>
       <div class="px-line"><span class="px" id="live-px">${num(e.price)}</span><span id="live-chg">${pct(e.chg_pct)}</span>
-        <span class="meta" id="live-asof">${shortDate(e.pdate)} 收盤</span></div>
+        <span class="meta" id="live-asof">${e.live ? '<span class="live-tag">即時</span>' : `${shortDate(e.pdate)} 收盤`}</span></div>
       <div class="kv">
         <span>淨值 <b>${num(e.nav)}</b></span><span>折溢價 <b>${pct(e.premium)}</b></span>
         <span>規模 <b>${aum(e.aum)}</b></span><span>殖利率 <b>${esc(yieldText)}</b></span></div>

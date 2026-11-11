@@ -223,3 +223,10 @@ h2 { font-size: 16px; font-weight: 700; margin: 22px 0 8px; display: flex; align
 .screener select, .screener input { font: inherit; background: var(--panel-2); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; }
 .screener input { width: 76px; }
 .screener button { font: inherit; background: var(--accent); color: var(--bg); border: 0; border-radius: 8px; padding: 4px 14px; cursor: pointer; font-weight: 600; }
+
+/* 詳細頁上方：返回、上一檔／下一檔 */
+.nav-row { display: flex; justify-content: space-between; gap: 8px; margin: 0 0 10px; }
+.nav-row span { display: flex; gap: 8px; }
+.nav-row a { font-size: 13px; border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; color: var(--muted); text-decoration: none; }
+.nav-row a:hover { color: var(--fg); border-color: var(--accent); }
+.hint { font-size: 13px; color: var(--fg); background: var(--accent-bg); border-radius: 8px; padding: 6px 10px; margin: 8px 0 0; }
