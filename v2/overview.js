@@ -35,6 +35,8 @@ const Ovw = (() => {
       .filter(e => !q || e.code.toUpperCase().includes(q) || String(e.name || "").toUpperCase().includes(q))
       .map(e => ({ ...e, value: vol[e.code] ? vol[e.code].value : null }));
   }
+  // 成交金額是每晚更新的（前一個交易日），盤中價格是即時的：欄名標日期，免得以為是今天（使用者 2026-11-12）
+  const quoteCols = day => QUOTE_COLS.map(c => c.key === "value" ? { ...c, label: `成交金額（${day}）` } : c);
   const QUOTE_COLS = [
     { key: "code", label: "代號", text: 1, cls: "code-col", get: r => r.code, html: r => esc(r.code) },
     { key: "name", label: "名稱", text: 1, tags: 1, get: r => r.name, html: r => esc(r.name) },
@@ -50,7 +52,8 @@ const Ovw = (() => {
     const list = quoteRows(o, f, st);
     const issuers = [...new Set(o.etfs.map(e => e.issuer).filter(Boolean))].sort((a, b) => a.localeCompare(b, "zh-Hant"));
     const chips = R.CHIP_GROUPS.map(g => g.map(([l]) => `<button type="button" data-rchip="${esc(l)}" aria-pressed="${(st.chips || []).includes(l)}">${esc(l)}</button>`).join("")).join('<span class="sep"></span>');
-    const t = TB.render("quote", QUOTE_COLS, list, st.sort, { rowLink: r => href(r.code) });
+    const vday = f && f.end ? C.shortDate(f.end) : C.shortDate(o.price_date);
+    const t = TB.render("quote", quoteCols(vday), list, st.sort, { rowLink: r => href(r.code) });
     const asof = live ? `盤中即時（證交所 ${esc(live)}），淨值是預估` : `${C.shortDate(o.price_date)} 收盤`;
     return `<section class="card"><div class="ov-tools">
         <input type="search" data-oq value="${esc(st.q || "")}" placeholder="篩選：代號或名稱" aria-label="篩選代號或名稱" autocomplete="off">
