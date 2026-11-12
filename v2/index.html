@@ -19,7 +19,11 @@
         <input type="search" id="q" placeholder="搜尋 ETF 或個股（代號、名稱）" autocomplete="off" aria-label="搜尋 ETF 或個股">
         <div class="suggest" id="suggest" hidden></div>
       </div>
-      <select class="skin" id="skin" aria-label="配色"></select>
+      <div class="tools-r">
+        <select class="skin" id="skin" aria-label="配色"></select>
+        <label class="code-pick" title="代號顏色（只存在這台裝置的瀏覽器）">代號<input type="color" id="codeColor" aria-label="代號顏色"></label>
+        <button type="button" class="code-reset" id="codeReset" title="代號顏色還原成預設" aria-label="代號顏色還原" hidden>↺</button>
+      </div>
     </div>
     <nav class="nav" id="nav"></nav>
   </header>

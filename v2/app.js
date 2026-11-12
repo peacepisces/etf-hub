@@ -12,7 +12,18 @@ const LIVE_EVERY_MS = 20000;
 // 配色選單：換了就存起來、重畫（圖表顏色要重新讀）
 const skinEl = document.getElementById("skin");
 skinEl.innerHTML = Theme.options(Theme.saved());
-skinEl.addEventListener("change", () => { Theme.apply(skinEl.value); Theme.save(skinEl.value); render(); });
+skinEl.addEventListener("change", () => { Theme.apply(skinEl.value); Theme.save(skinEl.value); syncCodePicker(); render(); });
+// 代號顏色調色盤：拖動時畫面立刻跟著變（只換 css 變數，不用重畫）；↺ 還原成配色預設的金色
+const codeEl = document.getElementById("codeColor"), codeReset = document.getElementById("codeReset");
+function syncCodePicker() {
+  const custom = Theme.savedCode();
+  const cur = custom || getComputedStyle(document.documentElement).getPropertyValue("--code").trim();
+  if (Theme.isHex(cur)) codeEl.value = cur;
+  codeReset.hidden = !custom;
+}
+codeEl.addEventListener("input", () => { Theme.applyCode(codeEl.value); Theme.saveCode(codeEl.value); codeReset.hidden = false; });
+codeReset.addEventListener("click", () => { Theme.applyCode(null); Theme.saveCode(null); syncCodePicker(); });
+syncCodePicker();
 document.getElementById("nav").innerHTML = Router.NAV.map(([k, l]) => `<a href="#/${k}" data-route="${k}">${l}</a>`).join("");
 
 async function loadIndex() {
