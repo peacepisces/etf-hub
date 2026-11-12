@@ -223,7 +223,7 @@ h2 { font-size: 16px; font-weight: 700; margin: 22px 0 8px; display: flex; align
 .toplist li, .evlist li { display: flex; align-items: baseline; gap: 8px; font-size: 14px; }
 .toplist li::before { counter-increment: n; content: counter(n); color: var(--muted); font-family: var(--mono); width: 1.2em; }
 .toplist li a, .evlist li a { color: var(--fg); text-decoration: none; flex: 1; min-width: 0; }
-.toplist li b { font-family: var(--mono); white-space: nowrap; } .toplist .sub { margin-left: 6px; }
+.toplist li b { font-family: var(--mono); white-space: nowrap; text-align: right; } .toplist .sub { margin-left: 6px; }
 .evlist .d { font-family: var(--mono); color: var(--muted); width: 5.5em; flex: none; }
 .evlist li.today .d { color: var(--accent); font-weight: 700; }
 .evlist .k { font-size: 11px; border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; color: var(--muted); flex: none; }
@@ -348,3 +348,5 @@ button.more { background: none; border: 0; padding: 0; margin-top: 10px; cursor:
 .px-c.lim-up { background: var(--up); color: #fff; font-weight: 700; }
 .px-c.lim-down { background: var(--down); color: #fff; font-weight: 700; }
 h2.sec { font-size: 15px; color: var(--muted); margin: 18px 0 0; }
+/* 三大法人卡：外資、投信拆解放在金額下面一行，名稱才不會被擠成兩行 */
+.toplist li b .sub.br { display: block; text-align: right; margin: 0; font-weight: 400; }

@@ -116,6 +116,8 @@ const Ovw = (() => {
         const x = fl[e.code] || {}, v = vol[e.code] || {};
         const r = { ...e, value: isNum(v.value) ? v.value : null, ratio: isNum(v.ratio) ? v.ratio : null };
         for (const [k] of FLOW_KEYS) { r["f_" + k] = isNum(x[k]) ? x[k] : null; r["ff_" + k] = !(x.full && x.full[k] === false); }
+        const ins = f && f.insti && f.insti.rows ? f.insti.rows[e.code] : null;
+        ["i_f", "i_t", "i_d", "i_tot"].forEach((k, i) => { r[k] = ins ? ins[i] : null; });
         return r;
       });
   }
@@ -129,20 +131,24 @@ const Ovw = (() => {
       { key: "ratio", label: "爆量倍數", r: 1, get: r => r.ratio, html: r => isNum(r.ratio) ? `${num(r.ratio, 1)} 倍` : dash },
       ...FLOW_KEYS.map(([k, l]) => ({ key: "f_" + k, label: l, r: 1, cls: k === "d1" ? "sep" : "", get: r => r["f_" + k],
         html: r => `${signedMoney(r["f_" + k])}${r["ff_" + k] ? "" : '<span class="sub">*</span>'}` })),
+      ...INSTI_KEYS.map(([k, l], i) => ({ key: k, label: l, r: 1, cls: i === 0 ? "sep" : "", get: r => r[k], html: r => signedMoney(r[k]) })),
       { key: "aum", label: "規模", r: 1, cls: "sep", get: r => r.aum, html: r => aum(r.aum) }];
   }
+  const INSTI_KEYS = [["i_f", "外資"], ["i_t", "投信"], ["i_d", "自營商"], ["i_tot", "合計"]];
   function flow(o, f, st) {
     const list = flowRows(o, f, st);
     const day = f && f.end ? C.shortDate(f.end) : C.shortDate(o.price_date);
     const chips = R.CHIP_GROUPS.map(g => g.map(([l]) => `<button type="button" data-rchip="${esc(l)}" aria-pressed="${(st.chips || []).includes(l)}">${esc(l)}</button>`).join("")).join('<span class="sep"></span>');
     const t = TB.render("flow", flowCols(day), list, st.sort, { rowLink: r => href(r.code),
-      groups: [{ label: "資金流向（受益權單位數變化 × 淨值）", keys: FLOW_KEYS.map(([k]) => "f_" + k) }] });
+      groups: [{ label: "資金流向（受益權單位數變化 × 淨值）", keys: FLOW_KEYS.map(([k]) => "f_" + k) },
+               { label: `三大法人買賣超（${f && f.insti ? C.shortDate(f.insti.date) : "—"}）`, keys: INSTI_KEYS.map(([k]) => k) }] });
     const since = Object.values((f && f.flows) || {}).map(v => v.since).filter(Boolean).sort()[0];
     return `<section class="card"><div class="ov-tools">
         <input type="search" data-oq value="${esc(st.q || "")}" placeholder="篩選：代號或名稱" aria-label="篩選代號或名稱" autocomplete="off"></div>
       <div class="chips" style="margin-top:8px">${chips}</div>
       <p class="note">共 ${list.length} 檔・成交金額、資金流向是 ${day} 的資料（每晚更新），價格、漲跌盤中即時・
-        爆量倍數＝成交金額 ÷ 前 20 個交易日平均・資金流向＝ETF 總單位數的變化 × 淨值（流入＝投信新發行），* ＝資料自 ${since ? C.shortDate(since) : "—"} 起、不滿整段</p></section>${t.html}`;
+        爆量倍數＝成交金額 ÷ 前 20 個交易日平均・資金流向＝ETF 總單位數的變化 × 淨值（流入＝投信新發行），* ＝資料自 ${since ? C.shortDate(since) : "—"} 起、不滿整段・
+        三大法人＝買賣超股數 × 收盤（自營商多是造市、避險，主要參考外資、投信）</p></section>${t.html}`;
   }
 
   // ---------- 報酬比較：各期間含息報酬（股價＋配息，不再投入）＋成立以來年化、費用、規模 ----------

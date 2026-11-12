@@ -115,7 +115,21 @@ const Today = (() => {
     return rows.length ? `<ol class="toplist">${rows.map(r => `<li>${etfLink(r.e)}<b>${valueHtml(r)}</b></li>`).join("")}</ol>` : '<p class="empty">沒有資料</p>';
   }
 
-  // opts.noInst：總覽排行榜用，不放「三大法人」（還沒做）
+  // 三大法人買超／賣超前 5（金額＝買賣超股數 × 收盤；使用者 2026-11-12）。自營商多是造市、避險，主要看外資、投信
+  function instiCards(o, f) {
+    const ins = f && f.insti;
+    if (!ins || !ins.rows) return "";
+    const byCode = new Map(o.etfs.map(e => [e.code, e]));
+    const rows = Object.entries(ins.rows).filter(([c]) => byCode.has(c)).map(([c, v]) => ({ e: byCode.get(c), v }));
+    const buy = rows.filter(r => r.v[3] > 0).sort((a, b) => b.v[3] - a.v[3]).slice(0, 5);
+    const sell = rows.filter(r => r.v[3] < 0).sort((a, b) => a.v[3] - b.v[3]).slice(0, 5);
+    const parts = r => `<span class="sub br">外 ${money(r.v[0]).replace(/<[^>]*>/g, "")}・投 ${money(r.v[1]).replace(/<[^>]*>/g, "")}</span>`;
+    const note = `買賣超股數 × 收盤・${shortDate(ins.date)}・自營商多是造市、避險，主要參考外資、投信`;
+    return card("三大法人・買超前 5", topList(buy, r => `${money(r.v[3])}${parts(r)}`), OV().link("flow", { sort: "i_tot" }), note)
+      + card("三大法人・賣超前 5", topList(sell, r => `${money(r.v[3])}${parts(r)}`), OV().link("flow", { sort: "i_tot", dir: 1 }));
+  }
+
+  // opts.noInst：舊參數（以前三大法人是空卡），現在不用
   function lowerCards(o, f, opts = {}) {
     const byCode = new Map(o.etfs.map(e => [e.code, e]));
     const flows = Object.entries((f && f.flows) || {}).filter(([c]) => byCode.has(c)).map(([c, v]) => ({ e: byCode.get(c), v: v.d1 }));
@@ -135,7 +149,7 @@ const Today = (() => {
       ${card("漲幅前 5", topList(up, r => pct(r.e.chg_pct)), OV().link("quote", { sort: "chg_pct" }))}
       ${card("跌幅前 5", topList(down, r => pct(r.e.chg_pct)), OV().link("quote", { sort: "chg_pct", dir: 1 }))}
       ${card("折溢價警示（±2% 以上）", topList(prem, r => pct(r.e.premium)), OV().link("quote", { sort: "premium", dir: 1 }), "折溢價大時，買賣價格和淨值差距大")}
-      ${opts.noInst ? "" : card("三大法人", '<p class="empty">之後才做</p>')}
+      ${instiCards(o, f)}
     </div>`;
   }
 
