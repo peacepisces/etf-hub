@@ -11,11 +11,13 @@ const Act = (() => {
                    ["ytd", "今年以來"], ["y1", "近 1 年"], ["since", "上市以來"]];
   const FLOW_OF = { d1: "d1", w1: "w1", m1: "m1" };
 
-  function rows(data, p) {
+  // live：盤中即時漲跌 {代號: %}（overview 合併即時後的 chg_pct；除息日已用平盤價比）。只用在「今日」，其他期間是昨天收盤算的
+  function rows(data, p, live) {
     const base = (data && data.base) || {};
+    const useLive = p === "d1" && live && isNum(live["0050"]);
     return ((data && data.etfs) || []).map(e => {
-      const v = e.ret ? e.ret[p] : null;
-      const b = p === "since" ? e.base_since : base[p];
+      const v = useLive && isNum(live[e.code]) ? live[e.code] : e.ret ? e.ret[p] : null;
+      const b = useLive ? live["0050"] : p === "since" ? e.base_since : base[p];
       const fk = FLOW_OF[p] || "m1";
       return { code: e.code, name: e.name, issuer: e.issuer, aum: e.aum, v: isNum(v) ? v : null,
                vs: isNum(v) && isNum(b) ? Math.round((v - b) * 100) / 100 : null,
@@ -52,7 +54,7 @@ const Act = (() => {
   function page(data, radar, st) {
     if (!data) return '<p class="empty">主動式資料還沒產生</p>';
     const p = st.period;
-    const list = rows(data, p);
+    const list = rows(data, p, st.live);
     const chips = PERIODS.map(([k, l]) => `<button type="button" data-aperiod="${k}" aria-pressed="${k === p}">${l}</button>`).join("");
     const plabel = (PERIODS.find(x => x[0] === p) || [, ""])[1];
     const flowLabel = { d1: "今日", w1: "近 1 週", m1: "近 1 月" }[list[0] ? list[0].flowKey : "m1"];
@@ -78,7 +80,7 @@ const Act = (() => {
     return `<section class="card"><div class="tc-head"><h2>A. 績效 vs 0050</h2><span class="meta">${plabel}贏 0050：<b>${win}/${tot}</b> 檔</span></div>
         <div class="chips">${chips}</div>
         <p class="hint">☑ 左邊打勾的 ETF 會畫進下方「B. 報酬走勢」，和 0050 比較走勢（已選 ${st.sel.length}/${MAX}，<a href="#/active" data-aclear="1">全部取消</a>）</p>
-        <p class="note">報酬含息・期間是滾動計算・上市以來和 0050 比同一段期間（不滿一年是累積、滿一年年化）・資金流向＝受益權單位數變化×淨值，* ＝資料從 11/05 起、不滿整段</p></section>
+        <p class="note">${p === "d1" && st.live ? `今日＝盤中即時（證交所 ${esc(st.liveTime || "")}）・` : ""}報酬含息・期間是滾動計算・上市以來和 0050 比同一段期間（不滿一年是累積、滿一年年化）・資金流向＝受益權單位數變化×淨值，* ＝資料從 11/05 起、不滿整段</p></section>
       ${t.html}
       <section class="card"><div class="tc-head"><h2>B. 報酬走勢</h2><div class="chips">${chips2}</div></div>
         ${st.sel.length ? `<div class="legend" id="alegend"></div><div class="chart" id="achart"></div>` : '<p class="empty">在上面的表格勾選 ETF（最多 8 檔），和 0050 一起比較</p>'}

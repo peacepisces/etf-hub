@@ -77,7 +77,9 @@ async function render() {
     else if (route === "active") {
       const [adata, radar] = await Promise.all([loadSite("active.json"), loadSite("radar.json")]);
       if (params.get("sel") && !state.act.sel.length) state.act.sel = params.get("sel").split(",").slice(0, Act.MAX);   // 分享連結用
-      html = Act.page(adata, radar, { ...state.act, sort: state.sort.act, range: state.range });
+      // 盤中：「今日」用即時漲跌（每 20 秒更新，見 pollLive）
+      const live = Live.isNewer(state.live, state.base.price_date) ? Object.fromEntries(o.etfs.map(e => [e.code, e.chg_pct])) : null;
+      html = Act.page(adata, radar, { ...state.act, sort: state.sort.act, range: state.range, live, liveTime: live && state.live.time });
       draw = () => {
         const el = document.getElementById("achart");
         if (!el || !adata) return null;
@@ -333,7 +335,9 @@ async function pollLive() {
   } catch (err) { return; }
   // 正在輸入（加入關注、查詢）時不重畫，不然打到一半會被清掉（審查）
   const typing = document.activeElement && document.activeElement.matches && document.activeElement.matches("#app input, #app select");
-  if (state.base && Router.parse(location.hash).route === "today" && Live.isNewer(state.live, state.base.price_date)) { if (!typing) render(); return; }
+  const r0 = Router.parse(location.hash).route;
+  // 今日焦點、主動式專區（選「今日」時）整頁重畫
+  if (state.base && (r0 === "today" || (r0 === "active" && state.act.period === "d1")) && Live.isNewer(state.live, state.base.price_date)) { if (!typing) render(); return; }
   if (!state.base || !shownCode || !Live.isNewer(state.live, state.base.price_date)) return;
   const e = current().etfs.find(x => x.code === shownCode);
   const px = document.getElementById("live-px"), chg = document.getElementById("live-chg"), asof = document.getElementById("live-asof");
