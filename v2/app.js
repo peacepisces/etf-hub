@@ -3,8 +3,8 @@
 
 const app = document.getElementById("app");
 const state = { base: null, index: null, candles: {}, details: {}, live: null, stocks: {},
-                sort: { rank: { key: "r_ytd", dir: -1 }, quote: { key: "code", dir: 1 }, tools: { key: "ret", dir: -1 }, stock: { key: "w", dir: -1 }, tag: { key: "ret.ytd", dir: -1 }, hold: { key: "w", dir: -1 }, div: { key: "yield", dir: -1 }, act: { key: "v", dir: -1 }, radar: { key: "buy", dir: -1 } },
-                range: "m3", chartMode: "kline", site: {}, passive: false, div: { f: { kind: "all", freq: "" }, ym: null }, act: { period: "y1", sel: [], issuer: null }, track: { tab: "radar", q: "", mode: "all", osel: [] }, rk: { period: "ytd", chips: [], tab: "quote", q: "", issuer: "", board: {} }, tools: { crit: {}, cmp: [] }, tab: "ops", hview: "stocks", filter: null, chart: null, cols: {}, etfNav: null };
+                sort: { rank: { key: "r_ytd", dir: -1 }, quote: { key: "code", dir: 1 }, flow: { key: "f_d1", dir: -1 }, tools: { key: "ret", dir: -1 }, stock: { key: "w", dir: -1 }, tag: { key: "ret.ytd", dir: -1 }, hold: { key: "w", dir: -1 }, div: { key: "yield", dir: -1 }, act: { key: "v", dir: -1 }, radar: { key: "buy", dir: -1 } },
+                range: "m3", chartMode: "kline", site: {}, passive: false, div: { f: { kind: "all", freq: "" }, ym: null }, act: { period: "y1", sel: [], issuer: null }, track: { tab: "radar", q: "", mode: "all", osel: [] }, rk: { period: "ytd", chips: [], tab: "quote", q: "", issuer: "", board: {} }, ev: { kind: "" }, tools: { crit: {}, cmp: [] }, tab: "ops", hview: "stocks", filter: null, chart: null, cols: {}, etfNav: null };
 // 即時：和舊版同一個轉接站、同樣頻率（web/app.js）；本機開發用本機轉接站
 const LIVE_URL = ["localhost", "127.0.0.1"].includes(location.hostname) ? "http://127.0.0.1:8787" : "https://etf-live.peacepisceslamb.workers.dev";
 const LIVE_EVERY_MS = 20000;
@@ -61,16 +61,30 @@ let renderSeq = 0, shownCode = null;
 async function render() {
   const seq = ++renderSeq;
   const { route, args, params } = Router.parse(location.hash);
-  document.querySelectorAll("#nav a").forEach(a => a.setAttribute("aria-current", a.dataset.route === route ? "page" : "false"));
+  const navRoute = route === "events" ? "today" : route;   // 完整事件清單算今日焦點底下
+  document.querySelectorAll("#nav a").forEach(a => a.setAttribute("aria-current", a.dataset.route === navRoute ? "page" : "false"));
   try {
     if (!state.base) state.base = await Core.loadJson("overview.json");
     const o = current();
     let html, draw = null;
     if (route === "rank") {
       const [flows, fees] = await Promise.all([loadSite("flows.json"), loadSite("fees.json")]);
-      if (params.get("tab") && seq === 1) state.rk.tab = params.get("tab");
+      // 從別頁連過來（Ovw.link）：照網址設好子項目、篩選、排序，然後把參數清掉（之後點按鈕才不會被蓋回去）
+      if (params.get("tab")) {
+        const tab = params.get("tab");
+        state.rk.tab = tab;
+        if (params.has("chip") || params.has("sort")) {
+          state.rk.chips = params.get("chip") ? params.get("chip").split(",") : [];
+          state.rk.q = ""; state.rk.issuer = "";
+        }
+        if (params.get("sort")) {
+          const key = { quote: "quote", flow: "flow", ret: "rank" }[tab];
+          if (key) state.sort[key] = { key: params.get("sort"), dir: params.get("dir") === "1" ? 1 : -1 };
+        }
+        history.replaceState(null, "", "#/rank");
+      }
       const liveTime = Live.isNewer(state.live, state.base.price_date) ? state.live.time : null;
-      html = Ovw.page(o, flows, fees, { ...state.rk, sort: state.sort.rank, qsort: state.sort.quote }, liveTime);
+      html = Ovw.page(o, flows, fees, { ...state.rk, sort: state.sort.rank, qsort: state.sort.quote, fsort: state.sort.flow }, liveTime);
     }
     else if (route === "holdings") {
       if (params.get("tab") && seq === 1) state.track.tab = params.get("tab");
@@ -137,6 +151,7 @@ async function render() {
       };
     }
     else if (route === "stock") html = Pages.stock(o, await loadIndex(), args[0] || "", state.sort.stock);
+    else if (route === "events") html = Today.eventsPage(await loadSite("events.json"), state.ev.kind);
     else {
       const [radar, events, flows] = await Promise.all(["radar.json", "events.json", "flows.json"].map(n => loadSite(n)));
       html = Today.page(o, { radar, events, flows }, { watch: Today.loadWatch(storage()), passive: state.passive });
@@ -199,7 +214,9 @@ app.addEventListener("click", ev => {
     render();
     return;
   }
-  // 總覽：切換子項目；排行榜「看完整排行」帶指標、期間、篩選跳到完整排行
+  const evk = ev.target.closest("button[data-evkind]");
+  if (evk) { state.ev.kind = evk.dataset.evkind; render(); return; }
+  // 總覽：切換子項目；排行榜「看報酬比較」帶期間、篩選跳過去
   const ot = ev.target.closest("button[data-otab],button[data-ogo]");
   if (ot) {
     if (ot.dataset.otab) state.rk.tab = ot.dataset.otab;

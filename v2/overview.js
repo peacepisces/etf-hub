@@ -8,7 +8,7 @@ const Ovw = (() => {
   const TB = typeof V2Table !== "undefined" ? V2Table : require("./table.js");
   const R = typeof Rank !== "undefined" ? Rank : require("./rankpage.js");
   const { esc, isNum, dash, num, pct, aum } = C;
-  const TABS = [["quote", "行情"], ["board", "排行榜"], ["ret", "報酬比較"], ["all", "全部 ETF"]];
+  const TABS = [["quote", "行情"], ["flow", "資金與成交"], ["ret", "報酬比較"], ["board", "排行榜"], ["all", "全部 ETF"]];
   const href = code => `#/etf/${encodeURIComponent(code)}`;
 
   function money(v) {   // 金額：億／萬（不帶正負號）
@@ -19,6 +19,15 @@ const Ovw = (() => {
   function signedMoney(v) {
     if (!isNum(v)) return dash;
     return `<span class="${v > 0 ? "up" : v < 0 ? "down" : ""}">${v > 0 ? "+" : v < 0 ? "−" : ""}${money(v)}</span>`;
+  }
+
+  // 從別頁連過來：#/rank?tab=quote&chip=高股息&sort=chg_pct&dir=1（app.js 讀了就清掉網址參數）
+  function link(tab, opts = {}) {
+    const p = new URLSearchParams({ tab });
+    if (opts.chip) p.set("chip", opts.chip);
+    if (opts.sort) p.set("sort", opts.sort);
+    if (opts.dir === 1) p.set("dir", "1");
+    return `#/rank?${p.toString()}`;
   }
 
   function tabs(cur) {
@@ -64,9 +73,8 @@ const Ovw = (() => {
 
   // ---------- 排行榜：每類一張小卡、前 5 名，期間可切；「看完整排行」帶條件跳過去 ----------
   // [標題, 篩選（完整排行的 chips）, 預設指標]；ret＝含息報酬（期間可切）
-  const BOARDS = [
-    ["主動式", ["主動"], "ret"], ["市值型", ["市值型"], "ret"], ["高股息", ["高股息"], "ret"], ["債券", ["債"], "ret"],
-    ["最吸金", [], "flow"], ["成交爆量", [], "ratio"]];
+  // 只放看「期間表現」的卡；最吸金、爆量是今天的資訊，在今日焦點和「資金與成交」（使用者 2026-11-12）
+  const BOARDS = [["主動式", ["主動"], "ret"], ["市值型", ["市值型"], "ret"], ["高股息", ["高股息"], "ret"], ["債券", ["債"], "ret"]];
   const BOARD_PERIODS = R.PERIODS.filter(([k]) => k !== "y3");
   // 高股息、債券卡多一個「殖利率」（舊版有，使用者 2026-11-12）；連到配息頁的哪一類
   const YIELD_BOARDS = { 主動式: "active", 市值型: "cap", 高股息: "high", 債券: "bond" };   // 四張報酬卡都有（使用者 2026-11-12）
@@ -93,6 +101,46 @@ const Ovw = (() => {
         ${go ? `<button type="button" class="more" data-ogo="${esc(go)}">${goLabel}</button>` : ""}</section>`;
     }).join("");
     return `<div class="tgrid">${cards}</div><p class="note">含息報酬＝股價＋領到的配息（不再投入）・盤中算到現在・殖利率＝近一年配息 ÷ 現價，上市未滿一年的預估值不列入</p>`;
+  }
+
+  // ---------- 資金與成交：價格、漲跌、成交金額、爆量倍數、資金流向（今日／近 1 週／近 1 月）、規模 ----------
+  const FLOW_KEYS = [["d1", "今日"], ["w1", "近 1 週"], ["m1", "近 1 月"]];
+  function flowRows(o, f, st) {
+    const q = String(st.q || "").trim().toUpperCase();
+    const fl = (f && f.flows) || {}, vol = (f && f.volume) || {};
+    return R.filter(o.etfs, st.chips || [])
+      .filter(e => !q || e.code.toUpperCase().includes(q) || String(e.name || "").toUpperCase().includes(q))
+      .map(e => {
+        const x = fl[e.code] || {}, v = vol[e.code] || {};
+        const r = { ...e, value: isNum(v.value) ? v.value : null, ratio: isNum(v.ratio) ? v.ratio : null };
+        for (const [k] of FLOW_KEYS) { r["f_" + k] = isNum(x[k]) ? x[k] : null; r["ff_" + k] = !(x.full && x.full[k] === false); }
+        return r;
+      });
+  }
+  function flowCols(day) {
+    return [
+      { key: "code", label: "代號", text: 1, cls: "code-col", get: r => r.code, html: r => esc(r.code) },
+      { key: "name", label: "名稱", text: 1, tags: 1, get: r => r.name, html: r => esc(r.name) },
+      { key: "price", label: "價格", r: 1, get: r => r.price, html: r => num(r.price) },
+      { key: "chg_pct", label: "漲跌", r: 1, get: r => r.chg_pct, html: r => pct(r.chg_pct) },
+      { key: "value", label: `成交金額（${day}）`, r: 1, cls: "sep", get: r => r.value, html: r => money(r.value) },
+      { key: "ratio", label: "爆量倍數", r: 1, get: r => r.ratio, html: r => isNum(r.ratio) ? `${num(r.ratio, 1)} 倍` : dash },
+      ...FLOW_KEYS.map(([k, l]) => ({ key: "f_" + k, label: l, r: 1, cls: k === "d1" ? "sep" : "", get: r => r["f_" + k],
+        html: r => `${signedMoney(r["f_" + k])}${r["ff_" + k] ? "" : '<span class="sub">*</span>'}` })),
+      { key: "aum", label: "規模", r: 1, cls: "sep", get: r => r.aum, html: r => aum(r.aum) }];
+  }
+  function flow(o, f, st) {
+    const list = flowRows(o, f, st);
+    const day = f && f.end ? C.shortDate(f.end) : C.shortDate(o.price_date);
+    const chips = R.CHIP_GROUPS.map(g => g.map(([l]) => `<button type="button" data-rchip="${esc(l)}" aria-pressed="${(st.chips || []).includes(l)}">${esc(l)}</button>`).join("")).join('<span class="sep"></span>');
+    const t = TB.render("flow", flowCols(day), list, st.sort, { rowLink: r => href(r.code),
+      groups: [{ label: "資金流向（受益權單位數變化 × 淨值）", keys: FLOW_KEYS.map(([k]) => "f_" + k) }] });
+    const since = Object.values((f && f.flows) || {}).map(v => v.since).filter(Boolean).sort()[0];
+    return `<section class="card"><div class="ov-tools">
+        <input type="search" data-oq value="${esc(st.q || "")}" placeholder="篩選：代號或名稱" aria-label="篩選代號或名稱" autocomplete="off"></div>
+      <div class="chips" style="margin-top:8px">${chips}</div>
+      <p class="note">共 ${list.length} 檔・成交金額、資金流向是 ${day} 的資料（每晚更新），價格、漲跌盤中即時・
+        爆量倍數＝成交金額 ÷ 前 20 個交易日平均・資金流向＝ETF 總單位數的變化 × 淨值（流入＝投信新發行），* ＝資料自 ${since ? C.shortDate(since) : "—"} 起、不滿整段</p></section>${t.html}`;
   }
 
   // ---------- 報酬比較：各期間含息報酬（股價＋配息，不再投入）＋成立以來年化、費用、規模 ----------
@@ -159,13 +207,14 @@ const Ovw = (() => {
   function page(o, f, fees, st, live) {
     const tab = TABS.some(([k]) => k === st.tab) ? st.tab : "quote";
     const body = tab === "quote" ? quote(o, f, { ...st, sort: st.qsort }, live)
+      : tab === "flow" ? flow(o, f, { ...st, sort: st.fsort })
       : tab === "board" ? board(o, f, fees, st)
       : tab === "ret" ? returns(o, fees, st, live)
       : all(o);
     return tabs(tab) + `<div class="tab-body">${body}</div>`;
   }
 
-  return { TABS, BOARDS, page, quote, quoteRows, board, all, returns, retRows };
+  return { TABS, BOARDS, page, quote, quoteRows, flow, flowRows, board, all, returns, retRows, link };
 })();
 
 if (typeof module !== "undefined") module.exports = Ovw;

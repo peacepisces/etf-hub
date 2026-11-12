@@ -3,6 +3,7 @@
 "use strict";
 
 const Today = (() => {
+  const OV = () => typeof Ovw !== "undefined" ? Ovw : require("./overview.js");   // 連到總覽（呼叫時才取，載入順序無關）
   const C = typeof Core !== "undefined" ? Core : require("./core.js");
   const { esc, isNum, dash, num, pct, shortDate } = C;
   const WATCH_KEY = "v2.watch";
@@ -15,10 +16,11 @@ const Today = (() => {
     const out = [];
     const base = by("0050");
     out.push({ label: "0050", v: base && isNum(base.chg_pct) ? base.chg_pct : null, n: 1, code: "0050" });
-    for (const [label, f] of [["主動式平均", e => e.mgmt === "主動"], ["高股息平均", e => e.type === "高股息"],
-                              ["市值型平均", e => e.type === "市值型"], ["債券平均", e => e.type === "債券"]]) {
+    // chip：點小格 → 總覽・行情只列這一類、依今日漲跌排（使用者 2026-11-12：原本都跳主動式專區）
+    for (const [label, f, chip] of [["主動式平均", e => e.mgmt === "主動", "主動"], ["高股息平均", e => e.type === "高股息", "高股息"],
+                              ["市值型平均", e => e.type === "市值型", "市值型"], ["債券平均", e => e.type === "債券", "債"]]) {
       const xs = vals(f);
-      out.push({ label, v: avg(xs), n: xs.length });
+      out.push({ label, v: avg(xs), n: xs.length, chip });
     }
     for (const c of watch || []) {
       const e = by(c);
@@ -69,7 +71,7 @@ const Today = (() => {
 
   function perfRow(o, watch) {
     const b = beat(o.etfs);
-    const tiles = groups(o.etfs, watch).map(g => `<a class="ptile${g.watch ? " watch" : ""}" href="${g.code ? href(g.code) : "#/active"}">
+    const tiles = groups(o.etfs, watch).map(g => `<a class="ptile${g.watch ? " watch" : ""}" href="${g.code ? href(g.code) : OV().link("quote", { chip: g.chip, sort: "chg_pct" })}">
       <span>${esc(g.label)}${g.watch ? '<button type="button" class="x" data-unwatch="' + esc(g.code) + '" aria-label="移除">×</button>' : ""}</span>
       <b>${pct(g.v)}</b>${g.code ? "" : `<i>${g.n} 檔</i>`}</a>`).join("");
     return `<section class="card"><div class="tc-head"><h2>今日表現 vs 大盤（0050）</h2>
@@ -105,7 +107,7 @@ const Today = (() => {
         <span class="d">${e.today ? `今天${esc(e.kind)}` : shortDate(e.date)}</span><span class="k k-${esc(e.kind)}">${esc(e.kind)}</span>
         <a href="${href(e.code)}">${esc(e.name)}<span class="code">${esc(e.code)}</span></a><span class="dt">${esc(e.detail)}</span>${e.new ? "🆕" : ""}</li>`).join("")}</ul>`
       : '<p class="empty">兩週內沒有事件</p>';
-    return card("即將發生（兩週內）", body, "#/dividend",
+    return card("即將發生（兩週內）", body, "#/events",
       "依事件日排序・🆕＝我們兩天內第一次收到（可能比投信公告晚一天）・分割是恢復買賣日・新上市只有上市 ETF");
   }
 
@@ -126,21 +128,41 @@ const Today = (() => {
     const down = movers.slice().sort((a, b) => a.chg_pct - b.chg_pct).slice(0, 5).map(e => ({ e }));
     const prem = o.etfs.filter(e => isNum(e.premium) && Math.abs(e.premium) >= 2).sort((a, b) => Math.abs(b.premium) - Math.abs(a.premium)).slice(0, 8).map(e => ({ e }));
     return `<div class="tgrid">
-      ${card("資金流向・最吸金", topList(inflow, r => money(r.v)), "#/rank", `受益權單位數變化 × 淨值・${f ? shortDate(f.end) : ""}・資料自 ${since ? shortDate(since) : "—"} 起`)}
-      ${card("資金流向・最失血", topList(outflow, r => money(r.v)), "#/rank")}
-      ${card("成交金額爆量", topList(vol, r => `${num(r.v.ratio, 1)} 倍<span class="sub">${money(Math.abs(r.v.value)).replace(/<[^>]*>/g, "").replace("+", "")}</span>`), "#/rank", "今天成交金額 ÷ 前 20 個交易日平均（成交 5 千萬以上）")}
-      ${card("漲幅前 5", topList(up, r => pct(r.e.chg_pct)), "#/rank")}
-      ${card("跌幅前 5", topList(down, r => pct(r.e.chg_pct)), "#/rank")}
-      ${card("折溢價警示（±2% 以上）", topList(prem, r => pct(r.e.premium)), "#/rank", "折溢價大時，買賣價格和淨值差距大")}
+      ${card("資金流向・最吸金", topList(inflow, r => money(r.v)), OV().link("flow", { sort: "f_d1" }), `受益權單位數變化 × 淨值・${f ? shortDate(f.end) : ""}・資料自 ${since ? shortDate(since) : "—"} 起`)}
+      ${card("資金流向・最失血", topList(outflow, r => money(r.v)), OV().link("flow", { sort: "f_d1", dir: 1 }))}
+      ${card("成交金額爆量", topList(vol, r => `${num(r.v.ratio, 1)} 倍<span class="sub">${money(Math.abs(r.v.value)).replace(/<[^>]*>/g, "").replace("+", "")}</span>`), OV().link("flow", { sort: "ratio" }), "今天成交金額 ÷ 前 20 個交易日平均（成交 5 千萬以上）")}
+      ${card("漲幅前 5", topList(up, r => pct(r.e.chg_pct)), OV().link("quote", { sort: "chg_pct" }))}
+      ${card("跌幅前 5", topList(down, r => pct(r.e.chg_pct)), OV().link("quote", { sort: "chg_pct", dir: 1 }))}
+      ${card("折溢價警示（±2% 以上）", topList(prem, r => pct(r.e.premium)), OV().link("quote", { sort: "premium", dir: 1 }), "折溢價大時，買賣價格和淨值差距大")}
       ${card("三大法人", '<p class="empty">之後才做</p>')}
     </div>`;
+  }
+
+  // 即將發生・完整清單（#/events）：依日期分組、可依種類篩選（使用者 2026-11-12：原本「看全部」跳到配息頁）
+  function eventsPage(ev, kind) {
+    const all = (ev && ev.events) || [];
+    const kinds = [...new Set(all.map(e => e.kind))];
+    const list = kind ? all.filter(e => e.kind === kind) : all;
+    const chips = [["", "全部"], ...kinds.map(k => [k, k])].map(([k, l]) =>
+      `<button type="button" data-evkind="${esc(k)}" aria-pressed="${(kind || "") === k}">${esc(l)}${k ? ` ${all.filter(e => e.kind === k).length}` : ` ${all.length}`}</button>`).join("");
+    const days = [...new Set(list.map(e => e.date))].sort();
+    const body = days.map(d => {
+      const items = list.filter(e => e.date === d);
+      const today = items.some(e => e.today);
+      return `<section class="card"><h2>${today ? "今天" : shortDate(d)}<span class="badge">${items.length}</span></h2><ul class="evlist">${items.map(e => `<li>
+        <span class="k k-${esc(e.kind)}">${esc(e.kind)}</span><a href="${href(e.code)}">${esc(e.name)}<span class="code">${esc(e.code)}</span></a>
+        <span class="dt">${esc(e.detail)}</span>${e.new ? "🆕" : ""}</li>`).join("")}</ul></section>`;
+    }).join("") || '<p class="empty">沒有事件</p>';
+    return `<div class="nav-row"><a href="#/today">← 今日焦點</a></div>
+      <section class="card"><h2>即將發生（兩週內）</h2><div class="chips">${chips}</div>
+      <p class="note">依事件日排序・🆕＝我們兩天內第一次收到・分割是恢復買賣日・新上市只有上市 ETF</p></section>${body}`;
   }
 
   function page(o, data, opts) {
     return `${perfRow(o, opts.watch)}<div class="tgrid two">${radarCard(data.radar, opts.passive)}${eventsCard(data.events)}</div>${lowerCards(o, data.flows)}`;
   }
 
-  return { groups, beat, loadWatch, saveWatch, radarRows, radarDates, page, WATCH_KEY };
+  return { groups, beat, loadWatch, saveWatch, radarRows, radarDates, page, eventsPage, WATCH_KEY };
 })();
 
 if (typeof module !== "undefined") module.exports = Today;
