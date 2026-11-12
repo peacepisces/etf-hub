@@ -36,11 +36,12 @@ const Chart = (() => {
     return out;
   }
 
-  // 含息走勢：[[日期, 指數]] → 第一點 0%、之後累積 %
+  // 含息走勢：[[日期, 股價, 累計配息]]（舊格式 [日期, 指數]）→ 第一點 0%、之後累積 %
+  // 第一個點買進、每個點賣出的報酬：(P ＋ D − D0) ÷ P0 − 1（股價＋領到的配息，不再投入；使用者 2026-11-12）
   function rebase(tri) {
     if (!tri.length) return [];
-    const v0 = tri[0][1];
-    return tri.map(([time, v]) => ({ time, value: Math.round((v / v0 - 1) * 10000) / 100 }));
+    const [, p0, d0 = 0] = tri[0];
+    return tri.map(([time, p, d = 0]) => ({ time, value: Math.round(((p + d - d0) / p0 - 1) * 10000) / 100 }));
   }
 
   // 0050 對齊 ETF 的第一天：從 from 當天（沒有就之前最近一天）起算 0%，只回傳 ≥ from 的點

@@ -47,7 +47,7 @@ const Pages = (() => {
   ];
   function rank(o, s) {
     const t = V2Table.render("rank", RANK_COLS, o.etfs, s, { rowLink: e => etfHref(e.code) });
-    return `<p class="lead">暫時版，第 7 階段改成完整排行・共 ${t.sorted.length} 檔・報酬含息・價格 ${shortDate(o.price_date)}・點欄位名稱排序・今年以來、近 1 年、規模、殖利率各自的前 3 名會用顏色和標籤標出來</p>${t.html}`;
+    return `<p class="lead">暫時版，第 7 階段改成完整排行・共 ${t.sorted.length} 檔・含息報酬＝股價＋領到的配息（不再投入）・價格 ${shortDate(o.price_date)}・點欄位名稱排序・今年以來、近 1 年、規模、殖利率各自的前 3 名會用顏色和標籤標出來</p>${t.html}`;
   }
 
   // ---------- ETF 詳細頁 ----------
@@ -62,7 +62,7 @@ const Pages = (() => {
     if (v.chart === "ret") {
       chart = v.d && v.d.tri && v.d.tri.length
         ? `<div class="chart-tools">${modes}<div class="chips">${chips}</div></div><div class="legend" id="legend"></div><div class="chart" id="returns"></div>
-           <p class="chart-note">含息報酬（配息再投入），期間第一天＝0%・0050 是灰色虛線</p>`
+           <p class="chart-note">含息報酬＝股價＋領到的配息（不再投入），期間第一天＝0%・0050 是灰色虛線</p>`
         : `<div class="chart-tools">${modes}</div><p class="empty">尚無報酬資料</p>`;
     } else {
       chart = `<div class="chart-tools">${modes}<div class="chips">${chips}</div></div>${kline(v.candles)}`;

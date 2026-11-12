@@ -33,7 +33,9 @@ const Detail = (() => {
   const daysBetween = (a, b) => (Date.parse(b) - Date.parse(a)) / 864e5;
 
   function head(e, d, etfs) {
-    const r = (d && d.ret) || { ...(e.ret || {}), d1: e.chg_pct };
+    const r0 = (d && d.ret) || { ...(e.ret || {}), d1: e.chg_pct };
+    // 盤中：各期間報酬算到現在（股價＋配息、不再投入）
+    const r = e.livePx && d && d.p0 ? C.liveRet(r0, e.chg, d.p0) : r0;
     const [sl, sv] = sinceCell(d && d.since);
     const cells = [["今日", `<span id="live-d1">${pct(e.chg_pct)}</span>`], ["近 1 週", pct(r.w1)], ["近 1 月", pct(r.m1)], ["近 3 月", pct(r.m3)],
       ["今年以來", pct(r.ytd)], ["近 1 年", pct(r.y1)]];
@@ -50,7 +52,7 @@ const Detail = (() => {
       <div class="rets">${cells.map(([l, v]) => `<div><span>${l}</span><b>${v}</b></div>`).join("")}
         <div class="boxed"><span>${esc(sl)}</span><b>${sv}</b></div>
         <div><span>vs 0050（近 1 年）</span><b>${pct(d && d.vs0050_y1)}</b></div></div>
-      <p class="chart-note">報酬含息（配息再投入）・期間是滾動計算（近 1 月＝往回推 1 個月）</p>
+      <p class="chart-note">含息報酬＝股價漲跌＋領到的配息（不假設再投入）・期間是滾動計算（近 1 月＝往回推 1 個月）</p>
     </section>`;
   }
 

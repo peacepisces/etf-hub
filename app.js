@@ -179,7 +179,7 @@ function pageRank(o, params) {
       <dl>${Object.keys(PERIOD_LABELS).map(k => `<div><dt>${PERIOD_LABELS[k]}</dt><dd>${pct(e.ret[k])}</dd></div>`).join("")}
       <div><dt>規模（億）</dt><dd>${aum(e.aum)}</dd></div><div><dt>殖利率</dt><dd>${yieldText(e)}</dd></div><div><dt>配息</dt><dd>${freqText(e)}</dd></div></dl></a>`).join("") || '<p class="empty">沒有符合的 ETF</p>'}</div>`;
   return `<div class="tools">${searchBox("rank")}${state.view === "card" ? sortSel : ""}${seg}</div>${chipBar("rank")}
-    <p class="lead">共 ${t.sorted.length} 檔・報酬含息（配息再投入）・價格 ${shortDate(o.price_date)}・更新 ${esc(o.built)}</p>${body}`;
+    <p class="lead">共 ${t.sorted.length} 檔・含息報酬＝股價漲跌＋領到的配息（不假設再投入）・價格 ${shortDate(o.price_date)}・更新 ${esc(o.built)}</p>${body}`;
 }
 app.addEventListener("click", ev => {
   const b = ev.target.closest("button[data-view]");

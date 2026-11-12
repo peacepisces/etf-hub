@@ -65,7 +65,7 @@ const Rank = (() => {
     return `<section class="card"><div class="rk-row"><span class="lb">指標</span><div class="chips">${ind}</div></div>
       <div class="rk-row"><span class="lb">期間</span><div class="chips">${per}</div></div>
       <div class="rk-row"><span class="lb">篩選</span><div class="chips">${chips}</div></div>
-      <p class="note">共 ${list.length} 檔・報酬含息・資金流向依期間（今日／近 1 月，其他期間用近 1 月），* ＝資料自 11/05 起不滿整段・
+      <p class="note">共 ${list.length} 檔・含息報酬＝股價＋領到的配息（不再投入）・資金流向依期間（今日／近 1 月，其他期間用近 1 月），* ＝資料自 11/05 起不滿整段・
         內扣費用 * ＝不滿一年換算的預估・同一組篩選是「任一」、不同組要「都符合」・前 3 名只算目前顯示的 ETF</p></section>${t.html}`;
   }
 

@@ -53,7 +53,7 @@ const loadDetail = code => loadOr(state.details, code, `v2/etf/${encodeURICompon
 // 收盤資料＋即時資料（即時比收盤新才覆蓋）
 // 收盤資料＋即時；有即時成交價的，各期間報酬也加上今天的漲跌（算到現在，使用者 2026-11-12）
 function current() {
-  const etfs = Live.mergeOverview(state.base, state.live).map(e => e.livePx && e.ret ? { ...e, ret: Core.liveRet(e.ret, e.chg_pct) } : e);
+  const etfs = Live.mergeOverview(state.base, state.live).map(e => e.livePx && e.ret ? { ...e, ret: Core.liveRet(e.ret, e.chg, e.p0) } : e);
   return { ...state.base, etfs };
 }
 
@@ -83,7 +83,7 @@ async function render() {
       const [adata, radar] = await Promise.all([loadSite("active.json"), loadSite("radar.json")]);
       if (params.get("sel") && !state.act.sel.length) state.act.sel = params.get("sel").split(",").slice(0, Act.MAX);   // 分享連結用
       // 盤中：「今日」用即時漲跌（每 20 秒更新，見 pollLive）
-      const live = Live.isNewer(state.live, state.base.price_date) ? Object.fromEntries(o.etfs.filter(e => e.livePx).map(e => [e.code, e.chg_pct])) : null;
+      const live = Live.isNewer(state.live, state.base.price_date) ? Object.fromEntries(o.etfs.filter(e => e.livePx).map(e => [e.code, { pct: e.chg_pct, chg: e.chg }])) : null;
       html = Act.page(adata, radar, { ...state.act, sort: state.sort.act, range: state.range, live, liveTime: live && state.live.time });
       draw = () => {
         const el = document.getElementById("achart");

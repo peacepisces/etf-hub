@@ -8,9 +8,10 @@ const Core = (() => {
   const isNum = v => typeof v === "number" && isFinite(v);
   const dash = '<span class="muted">—</span>';
   function num(v, d = 2) { return isNum(v) ? v.toLocaleString("zh-TW", { minimumFractionDigits: d, maximumFractionDigits: d }) : dash; }
-  // 期間報酬加上今天的漲跌：(1＋r)(1＋今天) − 1。昨天收盤算好的含息報酬 → 算到現在（盤中即時，使用者 2026-11-12）
-  function compound(r, today) { return isNum(r) && isNum(today) ? Math.round(((1 + r / 100) * (1 + today / 100) - 1) * 10000) / 100 : r; }
-  function liveRet(ret, today) { return ret ? Object.fromEntries(Object.entries(ret).map(([k, v]) => [k, compound(v, today)])) : ret; }
+  // 報酬＝股價＋領到的配息、不再投入：(P_t ＋ D_t − D_s) ÷ P_s − 1（使用者 2026-11-12）。
+  // 盤中算到現在：昨天收盤的報酬 ＋ 今天漲跌（元，除息日已扣配息、和平盤價比）÷ 期間起點股價 P_s
+  function addLive(r, chg, p0) { return isNum(r) && isNum(chg) && isNum(p0) && p0 > 0 ? Math.round((r + chg / p0 * 100) * 100) / 100 : r; }
+  function liveRet(ret, chg, p0) { return ret && p0 ? Object.fromEntries(Object.entries(ret).map(([k, v]) => [k, addLive(v, chg, p0[k])])) : ret; }
   function signCls(v) { return !isNum(v) || v === 0 ? "" : v > 0 ? "up" : "down"; }
   function pct(v, d = 2) {
     if (!isNum(v)) return dash;
@@ -26,7 +27,7 @@ const Core = (() => {
   }
   // 檔案真的不存在（404）才當成沒有資料；網路斷線等錯誤要讓使用者知道是讀取失敗
   const isNotFound = err => !!err && err.status === 404;
-  return { compound, liveRet, DATA, esc, isNum, dash, num, signCls, pct, aum, shortDate, loadJson, isNotFound };
+  return { addLive, liveRet, DATA, esc, isNum, dash, num, signCls, pct, aum, shortDate, loadJson, isNotFound };
 })();
 
 if (typeof module !== "undefined") module.exports = Core;
