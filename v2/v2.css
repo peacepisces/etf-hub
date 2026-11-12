@@ -325,3 +325,18 @@ main:has(.pf-dock.open) { padding-bottom: 70vh; }
 .nav-row a { font-size: 13px; border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; color: var(--muted); text-decoration: none; }
 .nav-row a:hover { color: var(--fg); border-color: var(--accent); }
 .hint { font-size: 13px; color: var(--fg); background: var(--accent-bg); border-radius: 8px; padding: 6px 10px; margin: 8px 0 0; }
+
+/* 總覽（使用者 2026-11-12）：行情的篩選列、排行榜小卡、全部 ETF 分組 */
+.ov-tools { display: flex; gap: 8px; flex-wrap: wrap; }
+.ov-tools input, .ov-tools select { font: inherit; font-size: 13px; color: var(--fg); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
+.ov-tools input { width: min(260px, 100%); }
+.bd .toplist li a .code { margin: 0 6px 0 0; }
+.bd select { font: inherit; font-size: 12px; color: var(--fg); background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; }
+button.more { background: none; border: 0; padding: 0; margin-top: 10px; cursor: pointer; font: inherit; font-size: 13px; }
+.all-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.all-list a { font-size: 13px; color: var(--fg); background: var(--panel-2); border-radius: 6px; padding: 3px 8px; text-decoration: none; }
+.all-list a .code { margin: 0 6px 0 0; }
+.all-list a:hover { outline: 1px solid var(--accent); }
+.ret-tbl .tbl th.grp { border-left: 1px solid var(--line); }
+.ret-tbl .tbl .sep { border-left: 1px solid var(--line); }
+.tbl sup.cum { font-size: 9px; color: var(--muted); margin-left: 2px; }

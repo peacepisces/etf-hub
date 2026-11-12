@@ -1,0 +1,160 @@
+// 總覽（使用者 2026-11-12：排行太雜沒重點 → 跟舊版結合）：上方切換 行情（預設）｜排行榜｜報酬比較｜全部 ETF。
+// 行情＝舊版總覽的簡單表（盤中即時）；排行榜＝各類前 5 名小卡；報酬比較＝各期間含息報酬＋成立以來年化（不混成交、資金等）；
+// 全部 ETF＝依類別分組。網頁和 node 測試共用。
+"use strict";
+
+const Ovw = (() => {
+  const C = typeof Core !== "undefined" ? Core : require("./core.js");
+  const TB = typeof V2Table !== "undefined" ? V2Table : require("./table.js");
+  const R = typeof Rank !== "undefined" ? Rank : require("./rankpage.js");
+  const { esc, isNum, dash, num, pct, aum } = C;
+  const TABS = [["quote", "行情"], ["board", "排行榜"], ["ret", "報酬比較"], ["all", "全部 ETF"]];
+  const href = code => `#/etf/${encodeURIComponent(code)}`;
+
+  function money(v) {   // 金額：億／萬（不帶正負號）
+    if (!isNum(v)) return dash;
+    const a = Math.abs(v);
+    return a >= 1e8 ? `${num(a / 1e8, 2)} 億` : `${num(a / 1e4, 0)} 萬`;
+  }
+  function signedMoney(v) {
+    if (!isNum(v)) return dash;
+    return `<span class="${v > 0 ? "up" : v < 0 ? "down" : ""}">${v > 0 ? "+" : v < 0 ? "−" : ""}${money(v)}</span>`;
+  }
+
+  function tabs(cur) {
+    return `<nav class="tabs">${TABS.map(([k, l]) => `<button type="button" data-otab="${k}" aria-selected="${cur === k}">${l}</button>`).join("")}</nav>`;
+  }
+
+  // ---------- 行情：代號、名稱、投信、價格、漲跌、淨值、折溢價、成交金額、規模 ----------
+  // 搜尋：代號或名稱包含；投信下拉；篩選 chips 跟完整排行共用（同一組任一、不同組都要符合）
+  function quoteRows(o, f, st) {
+    const q = String(st.q || "").trim().toUpperCase();
+    const vol = (f && f.volume) || {};
+    return R.filter(o.etfs, st.chips || [])
+      .filter(e => !st.issuer || e.issuer === st.issuer)
+      .filter(e => !q || e.code.toUpperCase().includes(q) || String(e.name || "").toUpperCase().includes(q))
+      .map(e => ({ ...e, value: vol[e.code] ? vol[e.code].value : null }));
+  }
+  const QUOTE_COLS = [
+    { key: "code", label: "代號", text: 1, cls: "code-col", get: r => r.code, html: r => esc(r.code) },
+    { key: "name", label: "名稱", text: 1, tags: 1, get: r => r.name, html: r => esc(r.name) },
+    { key: "issuer", label: "投信", text: 1, get: r => r.issuer, html: r => esc(r.issuer || "—") },
+    { key: "price", label: "價格", r: 1, get: r => r.price, html: r => num(r.price) },
+    { key: "chg_pct", label: "漲跌", r: 1, get: r => r.chg_pct, html: r => pct(r.chg_pct) },
+    { key: "nav", label: "淨值", r: 1, get: r => r.nav, html: r => num(r.nav) },
+    { key: "premium", label: "折溢價", r: 1, get: r => r.premium, html: r => pct(r.premium) },
+    { key: "value", label: "成交金額", r: 1, get: r => r.value, html: r => money(r.value) },
+    { key: "aum", label: "規模", r: 1, get: r => r.aum, html: r => aum(r.aum) }];
+
+  function quote(o, f, st, live) {
+    const list = quoteRows(o, f, st);
+    const issuers = [...new Set(o.etfs.map(e => e.issuer).filter(Boolean))].sort((a, b) => a.localeCompare(b, "zh-Hant"));
+    const chips = R.CHIP_GROUPS.map(g => g.map(([l]) => `<button type="button" data-rchip="${esc(l)}" aria-pressed="${(st.chips || []).includes(l)}">${esc(l)}</button>`).join("")).join('<span class="sep"></span>');
+    const t = TB.render("quote", QUOTE_COLS, list, st.sort, { rowLink: r => href(r.code) });
+    const asof = live ? `盤中即時（證交所 ${esc(live)}），淨值是預估` : `${C.shortDate(o.price_date)} 收盤`;
+    return `<section class="card"><div class="ov-tools">
+        <input type="search" data-oq value="${esc(st.q || "")}" placeholder="篩選：代號或名稱" aria-label="篩選代號或名稱" autocomplete="off">
+        <select data-oissuer aria-label="投信"><option value="">全部投信</option>${issuers.map(i => `<option${i === st.issuer ? " selected" : ""}>${esc(i)}</option>`).join("")}</select></div>
+      <div class="chips" style="margin-top:8px">${chips}</div>
+      <p class="note">共 ${list.length} 檔・${asof}・點欄位名稱排序、點一列看詳細</p></section>${t.html}`;
+  }
+
+  // ---------- 排行榜：每類一張小卡、前 5 名，期間可切；「看完整排行」帶條件跳過去 ----------
+  // [標題, 篩選（完整排行的 chips）, 預設指標]；ret＝含息報酬（期間可切）
+  const BOARDS = [
+    ["主動式", ["主動"], "ret"], ["市值型", ["市值型"], "ret"], ["高股息", ["高股息"], "ret"], ["債券", ["債"], "ret"],
+    ["最吸金", [], "flow"], ["成交爆量", [], "ratio"]];
+  const BOARD_PERIODS = R.PERIODS.filter(([k]) => k !== "y3");
+
+  function board(o, f, fees, st) {
+    const cards = BOARDS.map(([title, chips, ind]) => {
+      const p = ind === "ret" ? (st.board[title] || "ytd") : "d1";
+      const rows = R.filter(R.rows(o, f, fees, p), chips);
+      const val = r => r[ind];
+      const ok = ind === "ratio" ? (r => isNum(r.ratio) && r.value >= 5e7) : (r => isNum(val(r)));   // 爆量：成交 5 千萬以上才算
+      const top = rows.filter(ok).sort((a, b) => val(b) - val(a)).slice(0, 5);
+      const show = ind === "ret" ? (r => pct(r.ret)) : ind === "flow" ? (r => signedMoney(r.flow)) : (r => `${num(r.ratio, 1)} 倍`);
+      const sel = ind === "ret" ? `<select data-oboard="${esc(title)}" aria-label="${esc(title)} 期間">${BOARD_PERIODS.map(([k, l]) =>
+        `<option value="${k}"${k === p ? " selected" : ""}>${l}</option>`).join("")}</select>` : `<span class="meta">${ind === "flow" ? "今日" : "今天 ÷ 前 20 日均量"}</span>`;
+      const go = ind === "ret" ? `ret|${p}|${chips.join(",")}` : "";
+      return `<section class="card bd"><div class="tc-head"><h2>${esc(title)}</h2>${sel}</div>
+        <ol class="toplist">${top.map(r => `<li><a href="${href(r.code)}"><span class="code">${esc(r.code)}</span> ${esc(r.name)}</a><b>${show(r)}</b></li>`).join("") || '<li class="muted">資料不足</li>'}</ol>
+        ${go ? `<button type="button" class="more" data-ogo="${esc(go)}">看報酬比較 →</button>` : ""}</section>`;
+    }).join("");
+    return `<div class="tgrid">${cards}</div><p class="note">含息報酬＝股價＋領到的配息（不再投入）・盤中算到現在</p>`;
+  }
+
+  // ---------- 報酬比較：各期間含息報酬（股價＋配息，不再投入）＋成立以來年化、費用、規模 ----------
+  const RET_PERIODS = [["d1", "今日"], ["m1", "近 1 月"], ["m3", "近 3 月"], ["m6", "近 6 月"], ["ytd", "今年以來"], ["y1", "近 1 年"], ["y3", "近 3 年"]];
+  function retRows(o, fees, st) {
+    const q = String(st.q || "").trim().toUpperCase();
+    return R.filter(o.etfs, st.chips || [])
+      .filter(e => !q || e.code.toUpperCase().includes(q) || String(e.name || "").toUpperCase().includes(q))
+      .map(e => {
+        const fe = fees ? fees[e.code] : null;
+        const r = { ...e, fee: fe && isNum(fe.annual) ? fe.annual : null, feeEst: !!(fe && fe.estimated) };
+        for (const [k] of RET_PERIODS) r["r_" + k] = k === "d1" ? e.chg_pct : (e.ret || {})[k] ?? null;
+        r.r_since = e.since ? e.since.pct : null;
+        return r;
+      });
+  }
+  const ym = d => d ? d.slice(0, 7).replace("-", "/") : "";
+  function sinceHtml(r) {
+    const s = r.since;
+    if (!s || !isNum(s.pct)) return dash;
+    const tip = `${s.ann ? "年化" : "累積（成立未滿一年）"}・自 ${ym(s.start)} 起`;
+    return `<span title="${esc(tip)}">${pct(s.pct)}${s.ann ? "" : '<sup class="cum">累積</sup>'}</span>`;
+  }
+  function retCols() {
+    return [
+      { key: "code", label: "代號", text: 1, cls: "code-col", get: r => r.code, html: r => esc(r.code) },
+      { key: "name", label: "名稱", text: 1, tags: 1, get: r => r.name, html: r => esc(r.name) },
+      { key: "price", label: "價格", r: 1, get: r => r.price, html: r => num(r.price) },
+      ...RET_PERIODS.map(([k, l]) => ({ key: "r_" + k, label: l, r: 1, cls: k === "d1" ? "" : "", get: r => r["r_" + k], html: r => pct(r["r_" + k]),
+        ...(k === "ytd" ? { top: "ytd", tag: "今年" } : k === "y1" ? { top: "y1", tag: "1年" } : {}) })),
+      { key: "r_since", label: "成立以來年化", r: 1, cls: "sep", get: r => r.r_since, html: sinceHtml, top: "yld", tag: "年化" },
+      { key: "fee", label: "內扣費用", r: 1, get: r => r.fee, html: r => isNum(r.fee) ? `${num(r.fee)}%${r.feeEst ? "*" : ""}` : dash },
+      { key: "aum", label: "規模", r: 1, get: r => r.aum, html: r => aum(r.aum) }];
+  }
+  function returns(o, fees, st, live) {
+    const list = retRows(o, fees, st);
+    const chips = R.CHIP_GROUPS.map(g => g.map(([l]) => `<button type="button" data-rchip="${esc(l)}" aria-pressed="${(st.chips || []).includes(l)}">${esc(l)}</button>`).join("")).join('<span class="sep"></span>');
+    const t = TB.render("rank", retCols(), list, st.sort, { rowLink: r => href(r.code),
+      groups: [{ label: "含息報酬（股價＋領到的配息，不再投入）", keys: RET_PERIODS.map(([k]) => "r_" + k) }] });
+    return `<section class="card"><div class="ov-tools">
+        <input type="search" data-oq value="${esc(st.q || "")}" placeholder="篩選：代號或名稱" aria-label="篩選代號或名稱" autocomplete="off"></div>
+      <div class="chips" style="margin-top:8px">${chips}</div>
+      <p class="note">共 ${list.length} 檔・${live ? `盤中即時（證交所 ${esc(live)}），報酬算到現在` : `算到 ${C.shortDate(o.price_date)} 收盤`}・期間是滾動計算・
+        成立以來：滿一年是年化、未滿一年標「累積」，滑鼠移上去看起算月（很早上市的從 2010 起算）・內扣費用 * ＝不滿一年換算的預估・點欄位名稱排序</p></section>${t.html.replace('class="tbl-wrap"', 'class="tbl-wrap ret-tbl"')}`;
+  }
+
+  // ---------- 全部 ETF：依類別分組 ----------
+  function all(o) {
+    const groups = [["主動式", e => e.mgmt === "主動"], ["市值型", e => e.mgmt !== "主動" && e.type === "市值型"],
+      ["高股息", e => e.mgmt !== "主動" && e.type === "高股息"], ["債券", e => e.mgmt !== "主動" && e.type === "債券"],
+      ["槓桿／反向", e => e.type === "槓反"], ["期貨", e => e.type === "期貨"]];
+    const used = new Set();
+    const out = groups.map(([g, f]) => {
+      const list = o.etfs.filter(e => !used.has(e.code) && f(e)).sort((a, b) => a.code.localeCompare(b.code));
+      list.forEach(e => used.add(e.code));
+      return [g, list];
+    });
+    out.push(["其他", o.etfs.filter(e => !used.has(e.code)).sort((a, b) => a.code.localeCompare(b.code))]);
+    return `<p class="note">全部 ${o.etfs.length} 檔，依類別分組・點名稱看詳細</p>${out.filter(([, l]) => l.length).map(([g, list]) =>
+      `<section class="card"><h2>${esc(g)}<span class="badge">${list.length}</span></h2><div class="all-list">${list.map(e =>
+        `<a href="${href(e.code)}"><span class="code">${esc(e.code)}</span>${esc(e.name)}</a>`).join("")}</div></section>`).join("")}`;
+  }
+
+  function page(o, f, fees, st, live) {
+    const tab = TABS.some(([k]) => k === st.tab) ? st.tab : "quote";
+    const body = tab === "quote" ? quote(o, f, { ...st, sort: st.qsort }, live)
+      : tab === "board" ? board(o, f, fees, st)
+      : tab === "ret" ? returns(o, fees, st, live)
+      : all(o);
+    return tabs(tab) + `<div class="tab-body">${body}</div>`;
+  }
+
+  return { TABS, BOARDS, page, quote, quoteRows, board, all, returns, retRows };
+})();
+
+if (typeof module !== "undefined") module.exports = Ovw;

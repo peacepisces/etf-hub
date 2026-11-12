@@ -3,8 +3,8 @@
 
 const app = document.getElementById("app");
 const state = { base: null, index: null, candles: {}, details: {}, live: null, stocks: {},
-                sort: { rank: { key: "ret", dir: -1 }, tools: { key: "ret", dir: -1 }, stock: { key: "w", dir: -1 }, tag: { key: "ret.ytd", dir: -1 }, hold: { key: "w", dir: -1 }, div: { key: "yield", dir: -1 }, act: { key: "v", dir: -1 }, radar: { key: "buy", dir: -1 } },
-                range: "m3", chartMode: "kline", site: {}, passive: false, div: { f: { kind: "all", freq: "" }, ym: null }, act: { period: "y1", sel: [], issuer: null }, track: { tab: "radar", q: "", mode: "all", osel: [] }, rk: { period: "ytd", chips: [] }, tools: { crit: {}, cmp: [] }, tab: "ops", hview: "stocks", filter: null, chart: null, cols: {}, etfNav: null };
+                sort: { rank: { key: "r_ytd", dir: -1 }, quote: { key: "code", dir: 1 }, tools: { key: "ret", dir: -1 }, stock: { key: "w", dir: -1 }, tag: { key: "ret.ytd", dir: -1 }, hold: { key: "w", dir: -1 }, div: { key: "yield", dir: -1 }, act: { key: "v", dir: -1 }, radar: { key: "buy", dir: -1 } },
+                range: "m3", chartMode: "kline", site: {}, passive: false, div: { f: { kind: "all", freq: "" }, ym: null }, act: { period: "y1", sel: [], issuer: null }, track: { tab: "radar", q: "", mode: "all", osel: [] }, rk: { period: "ytd", chips: [], tab: "quote", q: "", issuer: "", board: {} }, tools: { crit: {}, cmp: [] }, tab: "ops", hview: "stocks", filter: null, chart: null, cols: {}, etfNav: null };
 // 即時：和舊版同一個轉接站、同樣頻率（web/app.js）；本機開發用本機轉接站
 const LIVE_URL = ["localhost", "127.0.0.1"].includes(location.hostname) ? "http://127.0.0.1:8787" : "https://etf-live.peacepisceslamb.workers.dev";
 const LIVE_EVERY_MS = 20000;
@@ -68,7 +68,9 @@ async function render() {
     let html, draw = null;
     if (route === "rank") {
       const [flows, fees] = await Promise.all([loadSite("flows.json"), loadSite("fees.json")]);
-      html = Rank.page(o, flows, fees, { ...state.rk, sort: state.sort.rank });
+      if (params.get("tab") && seq === 1) state.rk.tab = params.get("tab");
+      const liveTime = Live.isNewer(state.live, state.base.price_date) ? state.live.time : null;
+      html = Ovw.page(o, flows, fees, { ...state.rk, sort: state.sort.rank, qsort: state.sort.quote }, liveTime);
     }
     else if (route === "holdings") {
       if (params.get("tab") && seq === 1) state.track.tab = params.get("tab");
@@ -197,6 +199,20 @@ app.addEventListener("click", ev => {
     render();
     return;
   }
+  // 總覽：切換子項目；排行榜「看完整排行」帶指標、期間、篩選跳到完整排行
+  const ot = ev.target.closest("button[data-otab],button[data-ogo]");
+  if (ot) {
+    if (ot.dataset.otab) state.rk.tab = ot.dataset.otab;
+    if (ot.dataset.ogo) {
+      const [, per, chips] = ot.dataset.ogo.split("|");
+      state.rk.tab = "ret";
+      state.sort.rank = { key: "r_" + per, dir: -1 };
+      state.rk.chips = chips ? chips.split(",") : [];
+      window.scrollTo(0, 0);
+    }
+    render();
+    return;
+  }
   const tk = ev.target.closest("button[data-ttab],button[data-mmode],button[data-ov-del]");
   if (tk) {
     if (tk.dataset.ttab) state.track.tab = tk.dataset.ttab;
@@ -234,6 +250,8 @@ app.addEventListener("click", ev => {
   if (tr) location.hash = tr.dataset.href;
 });
 app.addEventListener("change", ev => {
+  if (ev.target.matches("select[data-oboard]")) { state.rk.board[ev.target.dataset.oboard] = ev.target.value; render(); return; }
+  if (ev.target.matches("select[data-oissuer]")) { state.rk.issuer = ev.target.value; render(); return; }
   if (ev.target.matches("input[data-passive]")) { state.passive = ev.target.checked; render(); }
   if (ev.target.matches("input[data-cmp]")) { state.tools.cmp = Act.toggle(state.tools.cmp, ev.target.dataset.cmp); render(); }
   if (ev.target.matches("input[data-asel]")) { state.act.sel = Act.toggle(state.act.sel, ev.target.dataset.asel); render(); }
@@ -400,3 +418,14 @@ document.addEventListener("click", ev => { if (!ev.target.closest(".search")) cl
 
 window.addEventListener("hashchange", () => { render().then(() => window.scrollTo(0, 0)); });
 render();
+
+function onQuoteFilter(el) {
+  state.rk.q = el.value;
+  const pos = el.selectionStart;
+  render().then(() => {
+    const n = document.querySelector("input[data-oq]");
+    if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch { /* 有些輸入框不支援 */ } }
+  });
+}
+app.addEventListener("input", ev => { if (ev.target.matches("input[data-oq]") && !ev.isComposing) onQuoteFilter(ev.target); });
+app.addEventListener("compositionend", ev => { if (ev.target.matches("input[data-oq]")) onQuoteFilter(ev.target); });

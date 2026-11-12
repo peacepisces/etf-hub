@@ -2,7 +2,7 @@
 "use strict";
 
 const Router = (() => {
-  const NAV = [["today", "今日焦點"], ["rank", "排行"], ["holdings", "持股追蹤"], ["active", "主動式專區"], ["dividend", "配息"], ["tools", "工具"]];
+  const NAV = [["today", "今日焦點"], ["rank", "總覽"], ["holdings", "持股追蹤"], ["active", "主動式專區"], ["dividend", "配息"], ["tools", "工具"]];
 
   function parse(hash) {
     const [path, qs] = String(hash || "").replace(/^#\/?/, "").split("?");
