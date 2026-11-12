@@ -93,6 +93,12 @@ const Detail = (() => {
         <tbody>${body || `<tr><td colspan="7" class="muted">${filter ? "沒有符合的股票" : "這天沒有加減碼"}</td></tr>`}</tbody></table></div>`;
   }
 
+  // 股價跟著漲跌上色；漲跌停像券商 App 一樣價格亮底色（紅底＝漲停、綠底＝跌停），不寫字（使用者 2026-11-12）
+  function pxCell(r) {
+    const cls = r.limit === "up" ? "lim-up" : r.limit === "down" ? "lim-down" : C.signCls(r.chg);
+    const tip = r.limit === "up" ? ' title="漲停"' : r.limit === "down" ? ' title="跌停"' : "";
+    return `<span class="px-c ${cls}"${tip}>${num(r.px)}</span> ${pct(r.chg)}`;
+  }
   // 台股漲跌停（同 metrics.limit_flag）：參考價 ×1.1 依升降單位往下取、×0.9 往上取
   const tick = p => p < 10 ? 0.01 : p < 50 ? 0.05 : p < 100 ? 0.1 : p < 500 ? 0.5 : p < 1000 ? 1 : 5;
   function limitFlag(price, ref) {
@@ -120,7 +126,7 @@ const Detail = (() => {
     { key: "n", label: "標的", text: 1, tags: 1, get: r => r.n, html: r => esc(r.n || r.s) },
     { key: "mv", label: "持股市值", r: 1, get: r => r.mv, html: r => `${money(r.mv)}<div class="sub">${num(r.lots, r.lots % 1 ? 3 : 0)} 張</div>` },
     { key: "w", label: "權重", r: 1, get: r => r.w, html: r => isNum(r.w) ? `${num(r.w)}%` : dash, top: "w", tag: "權重" },
-    { key: "chg", label: "股價與漲跌", r: 1, get: r => r.chg, html: r => `${num(r.px)} ${pct(r.chg)}${r.limit === "up" ? '<span class="lim up">漲停</span>' : r.limit === "down" ? '<span class="lim down">跌停</span>' : ""}` },
+    { key: "chg", label: "股價與漲跌", r: 1, get: r => r.chg, html: pxCell },
   ];
 
   function nonstockNote(h) {
