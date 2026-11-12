@@ -53,7 +53,7 @@ const Detail = (() => {
         <span>規模 <b>${aum(e.aum)}</b></span><span>殖利率 <b>${esc(yieldText)}</b></span></div>
       <div class="rets">${cells.map(([l, v]) => `<div><span>${l}</span><b>${v}</b></div>`).join("")}
         <div class="boxed"><span>${esc(sl)}</span><b>${sv}</b></div>
-        <div><span>vs 0050（近 1 年）</span><b>${pct(d && d.vs0050_y1)}</b></div></div>
+        <div><span>近 1 年 vs 0050</span><b>${pct(d && d.vs0050_y1)}</b></div></div>
       <p class="chart-note">含息報酬＝股價漲跌＋領到的配息（不假設再投入）・期間是滾動計算（近 1 月＝往回推 1 個月）</p>
     </section>`;
   }

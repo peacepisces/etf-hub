@@ -164,8 +164,8 @@ h2 { font-size: 16px; font-weight: 700; margin: 22px 0 8px; display: flex; align
 .tag2.ach { color: var(--accent); border-color: var(--accent); background: var(--accent-bg); }
 .kv { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 6px; color: var(--muted); font-size: 13px; }
 .kv b { color: var(--fg); font-family: var(--mono); font-weight: 600; }
-.rets { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; margin-top: 12px; }
-.rets > div { background: var(--panel-2); border-radius: 8px; padding: 6px 10px; display: flex; flex-direction: column; gap: 2px; }
+.rets { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 8px; margin-top: 12px; }
+.rets > div { background: var(--panel-2); border-radius: 8px; padding: 6px 10px; display: flex; flex-direction: column; justify-content: space-between; gap: 2px; }  /* 標題換行時數字仍對齊底部 */
 .rets > div > span { font-size: 12px; color: var(--muted); }
 .rets b { font-family: var(--mono); font-size: 15px; }
 .rets .boxed { outline: 1.5px solid var(--accent); }
