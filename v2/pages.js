@@ -3,7 +3,9 @@
 
 const Pages = (() => {
   const { esc, num, pct, aum, dash, isNum, shortDate } = Core;
-  const nameCell = e => `${esc(e.name)}<span class="code">${esc(e.code)}</span>`;
+  // 代號獨立一欄（使用者 2026-11-12）
+  const CODE_COL = { key: "code", label: "代號", text: 1, cls: "code-col", get: e => e.code, html: e => esc(e.code) };
+  const NAME_COL = { key: "name", label: "名稱", text: 1, tags: 1, get: e => e.name, html: e => esc(e.name) };
   const etfHref = code => `#/etf/${encodeURIComponent(code)}`;
   const yieldText = e => isNum(e.yield) ? (e.yield_est ? `<span class="est">預估 ${num(e.yield)}%</span>` : `${num(e.yield)}%`)
     : e.no_div ? '<span class="muted">尚未配息</span>' : dash;
@@ -33,7 +35,7 @@ const Pages = (() => {
 
   // ---------- 排行（暫時版：驗收共用表格） ----------
   const RANK_COLS = [
-    { key: "name", label: "ETF", text: 1, get: e => e.name, html: nameCell },
+    CODE_COL, NAME_COL,
     { key: "price", label: "價格", r: 1, get: e => e.price, html: e => num(e.price) },
     { key: "chg_pct", label: "漲跌", r: 1, get: e => e.chg_pct, html: e => pct(e.chg_pct) },
     { key: "ret.m1", label: "近 1 月", r: 1, get: e => e.ret.m1, html: e => pct(e.ret.m1) },
@@ -100,7 +102,7 @@ const Pages = (() => {
     const byCode = new Map(o.etfs.map(e => [e.code, e]));
     const rows = st.h.map(([c, w]) => ({ code: c, name: (byCode.get(c) || {}).name || c, type: (byCode.get(c) || {}).type, mgmt: (byCode.get(c) || {}).mgmt, w }));
     const cols = [
-      { key: "name", label: "ETF", text: 1, get: r => r.name, html: nameCell },
+      CODE_COL, NAME_COL,
       { key: "mgmt", label: "管理", text: 1, get: r => r.mgmt, html: r => esc(r.mgmt || "—") },
       { key: "type", label: "類型", text: 1, get: r => r.type, html: r => esc(r.type || "—") },
       { key: "w", label: "權重", r: 1, get: r => r.w, html: r => isNum(r.w) ? `${num(r.w)}%` : dash, top: "w", tag: "權重" },

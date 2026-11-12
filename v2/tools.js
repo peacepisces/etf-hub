@@ -22,8 +22,8 @@ const Tools = (() => {
     const opt = (v, l, cur) => `<option value="${esc(v)}" ${String(cur ?? "") === String(v) ? "selected" : ""}>${esc(l)}</option>`;
     const list = screen(rows, c);
     const cols = [
-      { key: "name", label: "ETF", text: 1, get: r => r.name, html: r => `<input type="checkbox" data-cmp="${esc(r.code)}" ${st.cmp.includes(r.code) ? "checked" : ""} aria-label="加入比較">
-        <a href="#/etf/${encodeURIComponent(r.code)}">${esc(r.name)}</a><span class="code">${esc(r.code)}</span>` },
+      { key: "code", label: "代號", text: 1, cls: "code-col", get: r => r.code, html: r => `<label class="cc"><input type="checkbox" data-cmp="${esc(r.code)}" ${st.cmp.includes(r.code) ? "checked" : ""} aria-label="加入比較 ${esc(r.code)}">${esc(r.code)}</label>` },
+      { key: "name", label: "名稱", text: 1, tags: 1, get: r => r.name, html: r => `<a href="#/etf/${encodeURIComponent(r.code)}">${esc(r.name)}</a>` },
       { key: "type", label: "類型", text: 1, get: r => r.type, html: r => esc(r.type || "—") },
       { key: "freq", label: "配息", get: r => r.freq, html: r => esc(FREQ[r.freq] || "—") },
       { key: "ret", label: "近 1 年", r: 1, get: r => y1(r), html: r => pct(y1(r)), top: "y1", tag: "1年" },

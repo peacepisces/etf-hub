@@ -57,8 +57,8 @@ const Act = (() => {
     const plabel = (PERIODS.find(x => x[0] === p) || [, ""])[1];
     const flowLabel = { d1: "今日", w1: "近 1 週", m1: "近 1 月" }[list[0] ? list[0].flowKey : "m1"];
     const cols = [
-      { key: "name", label: "ETF", text: 1, get: r => r.name, html: r => `<input type="checkbox" data-asel="${esc(r.code)}" ${st.sel.includes(r.code) ? "checked" : ""} aria-label="加入下方報酬走勢圖" title="加入下方 B. 報酬走勢圖">
-        <a href="#/etf/${encodeURIComponent(r.code)}">${esc(r.name)}</a><span class="code">${esc(r.code)}</span>` },
+      { key: "code", label: "代號", text: 1, cls: "code-col", get: r => r.code, html: r => `<label class="cc"><input type="checkbox" data-asel="${esc(r.code)}" ${st.sel.includes(r.code) ? "checked" : ""} aria-label="加入下方報酬走勢圖" title="加入下方 B. 報酬走勢圖">${esc(r.code)}</label>` },
+      { key: "name", label: "名稱", text: 1, tags: 1, get: r => r.name, html: r => `<a href="#/etf/${encodeURIComponent(r.code)}">${esc(r.name)}</a>` },
       { key: "v", label: plabel, r: 1, get: r => r.v, html: r => pct(r.v), top: "ytd", tag: "報酬" },
       { key: "vs", label: "vs 0050", r: 1, get: r => r.vs, html: r => pct(r.vs) },
       { key: "flow", label: `資金流向（${flowLabel}）`, r: 1, get: r => r.flow, html: r => `${money(r.flow)}${r.flowFull ? "" : '<span class="sub">*</span>'}`, top: "aum", tag: "吸金" },

@@ -41,7 +41,8 @@ const Rank = (() => {
 
   function columns(plabel) {
     return [
-      { key: "name", label: "ETF", text: 1, get: r => r.name, html: r => `${esc(r.name)}<span class="code">${esc(r.code)}</span>` },
+      { key: "code", label: "代號", text: 1, cls: "code-col", get: r => r.code, html: r => esc(r.code) },
+      { key: "name", label: "名稱", text: 1, tags: 1, get: r => r.name, html: r => esc(r.name) },
       { key: "price", label: "價格", r: 1, get: r => r.price, html: r => num(r.price) },
       { key: "ret", label: `報酬（${plabel}）`, r: 1, get: r => r.ret, html: r => pct(r.ret), top: "ytd", tag: "報酬" },
       { key: "value", label: "成交金額", r: 1, get: r => r.value, html: r => money(r.value) },

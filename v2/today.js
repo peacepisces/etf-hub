@@ -63,7 +63,8 @@ const Today = (() => {
   function money(v) {
     if (!isNum(v)) return dash;
     const a = Math.abs(v), s = v < 0 ? "−" : v > 0 ? "+" : "";
-    return a >= 1e8 ? `${s}${num(a / 1e8, 2)} 億` : `${s}${num(a / 1e4, 0)} 萬`;
+    const t = a >= 1e8 ? `${s}${num(a / 1e8, 2)} 億` : `${s}${num(a / 1e4, 0)} 萬`;
+    return v ? `<span class="${v > 0 ? "up" : "down"}">${t}</span>` : t;   // 流入紅、流出綠（使用者 2026-11-12）
   }
 
   function perfRow(o, watch) {
@@ -127,7 +128,7 @@ const Today = (() => {
     return `<div class="tgrid">
       ${card("資金流向・最吸金", topList(inflow, r => money(r.v)), "#/rank", `受益權單位數變化 × 淨值・${f ? shortDate(f.end) : ""}・資料自 ${since ? shortDate(since) : "—"} 起`)}
       ${card("資金流向・最失血", topList(outflow, r => money(r.v)), "#/rank")}
-      ${card("成交金額爆量", topList(vol, r => `${num(r.v.ratio, 1)} 倍<span class="sub">${money(r.v.value).replace("+", "")}</span>`), "#/rank", "今天成交金額 ÷ 前 20 個交易日平均（成交 5 千萬以上）")}
+      ${card("成交金額爆量", topList(vol, r => `${num(r.v.ratio, 1)} 倍<span class="sub">${money(Math.abs(r.v.value)).replace(/<[^>]*>/g, "").replace("+", "")}</span>`), "#/rank", "今天成交金額 ÷ 前 20 個交易日平均（成交 5 千萬以上）")}
       ${card("漲幅前 5", topList(up, r => pct(r.e.chg_pct)), "#/rank")}
       ${card("跌幅前 5", topList(down, r => pct(r.e.chg_pct)), "#/rank")}
       ${card("折溢價警示（±2% 以上）", topList(prem, r => pct(r.e.premium)), "#/rank", "折溢價大時，買賣價格和淨值差距大")}

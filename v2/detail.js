@@ -112,7 +112,8 @@ const Detail = (() => {
 
   // ---------- 成分股／產業分布 ----------
   const HOLD_COLS = [
-    { key: "n", label: "標的", text: 1, get: r => r.n, html: r => `${esc(r.n || r.s)}<span class="code">${esc(r.s)}</span>` },
+    { key: "s", label: "代號", text: 1, cls: "code-col", get: r => r.s, html: r => esc(r.s) },
+    { key: "n", label: "標的", text: 1, tags: 1, get: r => r.n, html: r => esc(r.n || r.s) },
     { key: "mv", label: "持股市值", r: 1, get: r => r.mv, html: r => `${money(r.mv)}<div class="sub">${num(r.lots, r.lots % 1 ? 3 : 0)} 張</div>` },
     { key: "w", label: "權重", r: 1, get: r => r.w, html: r => isNum(r.w) ? `${num(r.w)}%` : dash, top: "w", tag: "權重" },
     { key: "chg", label: "股價與漲跌", r: 1, get: r => r.chg, html: r => `${num(r.px)} ${pct(r.chg)}${r.limit === "up" ? '<span class="lim up">漲停</span>' : r.limit === "down" ? '<span class="lim down">跌停</span>' : ""}` },

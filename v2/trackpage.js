@@ -51,7 +51,8 @@ const Track = (() => {
   function radarSection(radar, st) {
     const rows = TD().radarRows(radar, st.passive);
     const cols = [
-      { key: "n", label: "股票", text: 1, get: r => r.n, html: r => `<a href="#/stock/${encodeURIComponent(r.s)}">${esc(r.n || r.s)}</a><span class="code">${esc(r.s)}</span>` },
+      { key: "s", label: "代號", text: 1, cls: "code-col", get: r => r.s, html: r => esc(r.s) },
+      { key: "n", label: "股票", text: 1, tags: 1, get: r => r.n, html: r => `<a href="#/stock/${encodeURIComponent(r.s)}">${esc(r.n || r.s)}</a>` },
       { key: "buy", label: "同買", r: 1, get: r => r.buy, html: r => r.buy ? `<span class="up">${r.buy}</span>` : dash },
       { key: "sell", label: "同賣", r: 1, get: r => r.sell, html: r => r.sell ? `<span class="down">${r.sell}</span>` : dash },
       { key: "newn", label: "新建倉", r: 1, get: r => r.new.length, html: r => r.new.length || dash },

@@ -88,7 +88,7 @@ footer a { text-decoration: underline; }
 .lead { color: var(--muted); font-size: 13px; margin: 14px 0 8px; }
 .note { color: var(--muted); font-size: 12px; }
 h2 { font-size: 16px; font-weight: 700; margin: 22px 0 8px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.code { font-family: var(--mono); font-size: 12px; color: var(--muted); margin-left: 6px; }
+.code { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--accent); margin-left: 6px; }
 .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .up { color: var(--up); } .down { color: var(--down); } .muted { color: var(--muted); } .est { color: var(--accent); }
 .empty { color: var(--muted); padding: 24px 14px; text-align: center; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
@@ -159,7 +159,7 @@ h2 { font-size: 16px; font-weight: 700; margin: 22px 0 8px; display: flex; align
 .kv b { color: var(--fg); font-family: var(--mono); font-weight: 600; }
 .rets { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; margin-top: 12px; }
 .rets > div { background: var(--panel-2); border-radius: 8px; padding: 6px 10px; display: flex; flex-direction: column; gap: 2px; }
-.rets span { font-size: 12px; color: var(--muted); }
+.rets > div > span { font-size: 12px; color: var(--muted); }
 .rets b { font-family: var(--mono); font-size: 15px; }
 .rets .boxed { outline: 1.5px solid var(--accent); }
 .chart-tools { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
@@ -171,14 +171,14 @@ h2 { font-size: 16px; font-weight: 700; margin: 22px 0 8px; display: flex; align
 .tab-body > .chips { margin-bottom: 4px; }
 .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
 .grid2 .mini { margin-top: 0; display: flex; flex-direction: column; gap: 2px; }
-.mini span { font-size: 12px; color: var(--muted); }
+.mini > span { font-size: 12px; color: var(--muted); }
 .mini b { font-size: 20px; font-family: var(--mono); }
 .sub { font-size: 11px; color: var(--muted); }
 .cnts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
 .cnt { font: inherit; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--fg); padding: 8px 4px; cursor: pointer;
   display: flex; flex-direction: column; align-items: center; gap: 2px; box-shadow: inset 0 3px 0 var(--k, var(--line)); }
 .cnt b { font-size: 20px; font-family: var(--mono); }
-.cnt span { font-size: 12px; color: var(--muted); }
+.cnt > span { font-size: 12px; color: var(--muted); }
 .cnt[aria-pressed="true"] { border-color: var(--accent); background: var(--panel-2); }
 .cnt.new, .flag.新增 { --k: var(--up); } .cnt.add, .flag.加碼 { --k: var(--up); }
 .cnt.gone, .flag.刪除 { --k: var(--down); } .cnt.cut, .flag.減碼 { --k: var(--down); }
@@ -199,7 +199,7 @@ h2 { font-size: 16px; font-weight: 700; margin: 22px 0 8px; display: flex; align
 .more { font-size: 13px; color: var(--accent); text-decoration: none; white-space: nowrap; }
 .ptiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; margin-top: 10px; }
 .ptile { background: var(--panel-2); border-radius: 8px; padding: 8px 10px; text-decoration: none; color: var(--fg); display: flex; flex-direction: column; gap: 2px; }
-.ptile span { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; }
+.ptile > span { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; }
 .ptile b { font-family: var(--mono); font-size: 18px; } .ptile i { font-style: normal; font-size: 11px; color: var(--muted); }
 .ptile.watch { outline: 1px dashed var(--line); }
 .ptile .x { background: none; border: 0; color: var(--muted); cursor: pointer; padding: 0 2px; font-size: 14px; line-height: 1; }
@@ -222,6 +222,14 @@ h2 { font-size: 16px; font-weight: 700; margin: 22px 0 8px; display: flex; align
 .evlist .k { font-size: 11px; border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; color: var(--muted); flex: none; }
 .evlist .dt { font-size: 12px; color: var(--muted); white-space: nowrap; }
 
+/* 選取的項目小標籤（持股追蹤重疊比較、工具績效比較） */
+.pf-items { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.pf-item { display: inline-flex; align-items: center; gap: 6px; background: var(--panel-2); border-radius: 8px; padding: 4px 8px; font-size: 13px; }
+.pf-item button { background: none; border: 0; color: var(--muted); cursor: pointer; }
+/* 代號獨立一欄（使用者 2026-11-12）：等寬粗體、強調色，固定在最左邊 */
+.tbl td.code-col { font-family: var(--mono); font-weight: 700; font-size: 13.5px; color: var(--accent); }
+.tbl .code-col .cc { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.tbl .code-col .cc input { margin: 0; }
 /* 配息頁（第 4 階段） */
 .pf-months { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-top: 10px; }
 .pf-m { background: var(--panel-2); border-radius: 8px; padding: 6px 8px; display: flex; flex-direction: column; }

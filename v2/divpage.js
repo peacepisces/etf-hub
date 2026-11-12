@@ -65,8 +65,8 @@ const Div = (() => {
       key: `m${m}`, label: `${m} 月`, r: 1, cls: "mo", get: r => r.months[m] ? r.months[m].cash : null,
       html: r => r.months[m] ? `<span class="${r.months[m].announced ? "muted" : ""}">${num(r.months[m].cash, 3)}${r.months[m].announced ? "*" : ""}</span>` : "" }));
     return [
-      { key: "name", label: "ETF", text: 1, get: r => r.name, html: r => `<label class="dn-name"><input type="checkbox" data-pf="${esc(r.code)}" ${r.code in pf ? "checked" : ""} aria-label="加入組合">
-        <span><a href="#/etf/${encodeURIComponent(r.code)}">${esc(r.name)}</a><span class="code">${esc(r.code)}</span></span></label>` },
+      { key: "code", label: "代號", text: 1, cls: "code-col", get: r => r.code, html: r => `<label class="cc"><input type="checkbox" data-pf="${esc(r.code)}" ${r.code in pf ? "checked" : ""} aria-label="加入組合 ${esc(r.code)}">${esc(r.code)}</label>` },
+      { key: "name", label: "名稱", text: 1, tags: 1, get: r => r.name, html: r => `<a href="#/etf/${encodeURIComponent(r.code)}">${esc(r.name)}</a>` },
       ...monthCols,
       { key: "ytd", label: `${year} 已配`, r: 1, cls: "sep", get: r => r.ytd, html: r => r.ytd ? num(r.ytd, 3) : dash },
       { key: "last_year", label: `${year - 1} 合計`, r: 1, get: r => r.last_year, html: r => r.last_year ? num(r.last_year, 3) : dash },

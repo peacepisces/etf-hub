@@ -2,6 +2,7 @@
 // 有 top 的欄位各自標前 3 名（由大到小、不管目前照哪欄排序、只算傳進來的列＝篩選後）：
 // 格子用該欄顏色打底，名稱欄加文字標籤（例「今年①」），不只靠顏色（使用者 2026-11-10）。
 // cols: {key, label, get(row) → 排序值, html(row, i) → 顯示, r: 靠右, text: 文字欄, cls: 額外 class（例 "mo" 月份細線）,
+//        tags: 前 3 名標籤放這欄（名稱欄；代號獨立一欄後，代號欄太窄放不下，使用者 2026-11-12）,
 //        top: 顏色代號（css 的 t-<top>）, tag: 標籤文字}
 "use strict";
 
@@ -60,6 +61,7 @@ const V2Table = (() => {
       }).join("");
       head = top + "</tr><tr>" + cols.map((c, i) => groupOf.has(c.key) ? th(c, i) : "").join("");
     } else head = cols.map((c, i) => th(c, i)).join("");
+    const tagCol = Math.max(0, cols.findIndex(c => c.tags));
     const body = sorted.map((row, i) => {
       const link = opts.rowLink ? ` class="link" data-href="${esc(opts.rowLink(row))}"` : "";
       const tags = cols.filter(c => tops.has(c.key) && tops.get(c.key).has(row))
@@ -67,7 +69,7 @@ const V2Table = (() => {
       return `<tr${link}>${cols.map((c, j) => {
         const rank = tops.has(c.key) ? tops.get(c.key).get(row) : undefined;
         const top = rank ? `top t-${esc(c.top)}` : "";
-        return `<td class="${cls(c, j, top)}">${c.html(row, i)}${j === 0 && tags ? `<span class="tags">${tags}</span>` : ""}</td>`;
+        return `<td class="${cls(c, j, top)}">${c.html(row, i)}${j === tagCol && tags ? `<span class="tags">${tags}</span>` : ""}</td>`;
       }).join("")}</tr>`;
     }).join("");
     const empty = `<tr><td colspan="${cols.length}" class="muted">沒有資料</td></tr>`;
