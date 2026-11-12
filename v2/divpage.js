@@ -8,10 +8,10 @@ const Div = (() => {
   const { esc, isNum, dash, num, pct } = C;
   const PF_KEY = "v2.portfolio";
   const FREQ = { 12: "月配", 6: "雙月配", 4: "季配", 2: "半年配", 1: "年配", 0: "不配息" };
-  const KINDS = [["all", "全部配息 ETF"], ["high", "高股息"], ["active", "主動式"], ["bond", "債券"]];   // 全部在最左（使用者 2026-11-11）
+  const KINDS = [["all", "全部配息 ETF"], ["high", "高股息"], ["cap", "市值型"], ["active", "主動式"], ["bond", "債券"]];   // 全部在最左（使用者 2026-11-11）
 
   function filter(rows, f) {
-    return rows.filter(r => (f.kind === "high" ? r.type === "高股息" : f.kind === "active" ? r.mgmt === "主動"
+    return rows.filter(r => (f.kind === "high" ? r.type === "高股息" : f.kind === "cap" ? r.type === "市值型" : f.kind === "active" ? r.mgmt === "主動"
       : f.kind === "bond" ? r.type === "債券" : true) && (!f.freq || String(r.freq) === String(f.freq)));
   }
 

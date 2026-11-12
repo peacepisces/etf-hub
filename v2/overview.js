@@ -66,7 +66,7 @@ const Ovw = (() => {
     ["最吸金", [], "flow"], ["成交爆量", [], "ratio"]];
   const BOARD_PERIODS = R.PERIODS.filter(([k]) => k !== "y3");
   // 高股息、債券卡多一個「殖利率」（舊版有，使用者 2026-11-12）；連到配息頁的哪一類
-  const YIELD_BOARDS = { 高股息: "high", 債券: "bond" };
+  const YIELD_BOARDS = { 主動式: "active", 市值型: "cap", 高股息: "high", 債券: "bond" };   // 四張報酬卡都有（使用者 2026-11-12）
 
   function board(o, f, fees, st) {
     const cards = BOARDS.map(([title, chips, ind]) => {
