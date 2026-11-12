@@ -37,8 +37,10 @@ const Detail = (() => {
     // 盤中：各期間報酬算到現在（股價＋配息、不再投入）
     const r = e.livePx && d && d.p0 ? C.liveRet(r0, e.chg, d.p0) : r0;
     const [sl, sv] = sinceCell(d && d.since);
-    const cells = [["今日", `<span id="live-d1">${pct(e.chg_pct)}</span>`], ["近 1 週", pct(r.w1)], ["近 1 月", pct(r.m1)], ["近 3 月", pct(r.m3)],
-      ["今年以來", pct(r.ytd)], ["近 1 年", pct(r.y1)]];
+    // data-ret：盤中每 20 秒只換這幾格的數字（app.js pollLive），不重畫整頁
+    const rc = k => `<span data-ret="${k}">${pct(r[k])}</span>`;
+    const cells = [["今日", `<span id="live-d1">${pct(e.chg_pct)}</span>`], ["近 1 週", rc("w1")], ["近 1 月", rc("m1")], ["近 3 月", rc("m3")],
+      ["今年以來", rc("ytd")], ["近 1 年", rc("y1")]];
     const tags = T.fixed(e).map(t => tag(t, "fixed")).join("") + T.achievements(e, etfs || []).map(t => tag(t, "ach")).join("");
     const yieldText = isNum(e.yield) ? (e.yield_est ? `預估 ${num(e.yield)}%` : `${num(e.yield)}%`) : e.no_div ? "尚未配息" : "—";
     return `<section class="card etf-head">

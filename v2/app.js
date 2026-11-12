@@ -349,6 +349,12 @@ async function pollLive() {
   if (!e || !px) return;
   px.textContent = Core.num(e.price);
   chg.innerHTML = Core.pct(e.chg_pct);
+  // 各期間報酬也算到現在（股價＋配息、不再投入）
+  const dd = state.details[shownCode];
+  if (dd && dd.ret && dd.p0 && e.livePx) {
+    const r = Core.liveRet(dd.ret, e.chg, dd.p0);
+    document.querySelectorAll("[data-ret]").forEach(el => { el.innerHTML = Core.pct(r[el.dataset.ret]); });
+  }
   const d1 = document.getElementById("live-d1");
   if (d1) d1.innerHTML = Core.pct(e.chg_pct);
   asof.innerHTML = `<span class="live-tag">即時 ${Core.esc(state.live.time || "")}</span>` +
