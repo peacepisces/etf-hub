@@ -347,3 +347,4 @@ button.more { background: none; border: 0; padding: 0; margin-top: 10px; cursor:
 .px-c { padding: 1px 4px; border-radius: 4px; }
 .px-c.lim-up { background: var(--up); color: #fff; font-weight: 700; }
 .px-c.lim-down { background: var(--down); color: #fff; font-weight: 700; }
+h2.sec { font-size: 15px; color: var(--muted); margin: 18px 0 0; }

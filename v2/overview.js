@@ -73,7 +73,7 @@ const Ovw = (() => {
 
   // ---------- 排行榜：每類一張小卡、前 5 名，期間可切；「看完整排行」帶條件跳過去 ----------
   // [標題, 篩選（完整排行的 chips）, 預設指標]；ret＝含息報酬（期間可切）
-  // 只放看「期間表現」的卡；最吸金、爆量是今天的資訊，在今日焦點和「資金與成交」（使用者 2026-11-12）
+  // 期間表現的卡（上面另有「今天」的卡：最吸金、最失血、爆量、漲跌幅、折溢價，跟今日焦點同一組；使用者 2026-11-12 要兩種都在）
   const BOARDS = [["主動式", ["主動"], "ret"], ["市值型", ["市值型"], "ret"], ["高股息", ["高股息"], "ret"], ["債券", ["債"], "ret"]];
   const BOARD_PERIODS = R.PERIODS.filter(([k]) => k !== "y3");
   // 高股息、債券卡多一個「殖利率」（舊版有，使用者 2026-11-12）；連到配息頁的哪一類
@@ -97,10 +97,12 @@ const Ovw = (() => {
       const go = k === "yield" ? `div|${yb}` : ind === "ret" ? `ret|${p}|${chips.join(",")}` : "";
       const goLabel = k === "yield" ? "看配息頁 →" : "看報酬比較 →";
       return `<section class="card bd"><div class="tc-head"><h2>${esc(title)}</h2>${sel}</div>
-        <ol class="toplist">${top.map(r => `<li><a href="${href(r.code)}"><span class="code">${esc(r.code)}</span> ${esc(r.name)}</a><b>${show(r)}</b></li>`).join("") || '<li class="muted">資料不足</li>'}</ol>
+        <ol class="toplist">${top.map(r => `<li><a href="${href(r.code)}">${esc(r.name)}<span class="code">${esc(r.code)}</span></a><b>${show(r)}</b></li>`).join("") || '<li class="muted">資料不足</li>'}</ol>
         ${go ? `<button type="button" class="more" data-ogo="${esc(go)}">${goLabel}</button>` : ""}</section>`;
     }).join("");
-    return `<div class="tgrid">${cards}</div><p class="note">含息報酬＝股價＋領到的配息（不再投入）・盤中算到現在・殖利率＝近一年配息 ÷ 現價，上市未滿一年的預估值不列入</p>`;
+    const TD = typeof Today !== "undefined" ? Today : require("./today.js");
+    return `<h2 class="sec">今天</h2>${TD.lowerCards(o, f, { noInst: true })}
+      <h2 class="sec">期間表現</h2><div class="tgrid">${cards}</div><p class="note">含息報酬＝股價＋領到的配息（不再投入）・盤中算到現在・殖利率＝近一年配息 ÷ 現價，上市未滿一年的預估值不列入</p>`;
   }
 
   // ---------- 資金與成交：價格、漲跌、成交金額、爆量倍數、資金流向（今日／近 1 週／近 1 月）、規模 ----------

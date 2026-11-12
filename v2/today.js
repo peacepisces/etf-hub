@@ -115,7 +115,8 @@ const Today = (() => {
     return rows.length ? `<ol class="toplist">${rows.map(r => `<li>${etfLink(r.e)}<b>${valueHtml(r)}</b></li>`).join("")}</ol>` : '<p class="empty">沒有資料</p>';
   }
 
-  function lowerCards(o, f) {
+  // opts.noInst：總覽排行榜用，不放「三大法人」（還沒做）
+  function lowerCards(o, f, opts = {}) {
     const byCode = new Map(o.etfs.map(e => [e.code, e]));
     const flows = Object.entries((f && f.flows) || {}).filter(([c]) => byCode.has(c)).map(([c, v]) => ({ e: byCode.get(c), v: v.d1 }));
     const since = Object.values((f && f.flows) || {}).map(v => v.since).sort()[0];
@@ -134,7 +135,7 @@ const Today = (() => {
       ${card("漲幅前 5", topList(up, r => pct(r.e.chg_pct)), OV().link("quote", { sort: "chg_pct" }))}
       ${card("跌幅前 5", topList(down, r => pct(r.e.chg_pct)), OV().link("quote", { sort: "chg_pct", dir: 1 }))}
       ${card("折溢價警示（±2% 以上）", topList(prem, r => pct(r.e.premium)), OV().link("quote", { sort: "premium", dir: 1 }), "折溢價大時，買賣價格和淨值差距大")}
-      ${card("三大法人", '<p class="empty">之後才做</p>')}
+      ${opts.noInst ? "" : card("三大法人", '<p class="empty">之後才做</p>')}
     </div>`;
   }
 
@@ -162,7 +163,7 @@ const Today = (() => {
     return `${perfRow(o, opts.watch)}<div class="tgrid two">${radarCard(data.radar, opts.passive)}${eventsCard(data.events)}</div>${lowerCards(o, data.flows)}`;
   }
 
-  return { groups, beat, loadWatch, saveWatch, radarRows, radarDates, page, eventsPage, WATCH_KEY };
+  return { groups, beat, loadWatch, saveWatch, radarRows, radarDates, page, eventsPage, lowerCards, WATCH_KEY };
 })();
 
 if (typeof module !== "undefined") module.exports = Today;
