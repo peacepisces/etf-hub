@@ -35,6 +35,7 @@ const Live = (() => {
       const out = { ...e, live: true };
       if (isNum(p)) {
         out.price = p;
+        out.livePx = true;   // chg_pct 是今天即時的（沒有即時價的 chg_pct 還是昨天的）
         // 除息日：平盤價＝昨收 − 配息（證交所的參考價，00940 11/10 實際驗證），不然高股息會顯示假跌
         let ref = e.price;
         if (isNum(ref) && e.exd && e.exd[0] === live.date && isNum(e.exd[1])) {

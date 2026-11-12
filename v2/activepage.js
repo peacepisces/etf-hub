@@ -14,10 +14,12 @@ const Act = (() => {
   // live：盤中即時漲跌 {代號: %}（overview 合併即時後的 chg_pct；除息日已用平盤價比）。只用在「今日」，其他期間是昨天收盤算的
   function rows(data, p, live) {
     const base = (data && data.base) || {};
-    const useLive = p === "d1" && live && isNum(live["0050"]);
+    const useLive = !!(live && isNum(live["0050"]));
     return ((data && data.etfs) || []).map(e => {
-      const v = useLive && isNum(live[e.code]) ? live[e.code] : e.ret ? e.ret[p] : null;
-      const b = useLive ? live["0050"] : p === "since" ? e.base_since : base[p];
+      const v0 = e.ret ? e.ret[p] : null, b0 = p === "since" ? e.base_since : base[p];
+      const lv = useLive && isNum(live[e.code]);
+      const v = !lv ? v0 : p === "d1" ? live[e.code] : p === "since" ? v0 : C.compound(v0, live[e.code]);
+      const b = !useLive ? b0 : p === "d1" ? live["0050"] : p === "since" ? b0 : C.compound(b0, live["0050"]);
       const fk = FLOW_OF[p] || "m1";
       return { code: e.code, name: e.name, issuer: e.issuer, aum: e.aum, v: isNum(v) ? v : null,
                vs: isNum(v) && isNum(b) ? Math.round((v - b) * 100) / 100 : null,
@@ -80,7 +82,7 @@ const Act = (() => {
     return `<section class="card"><div class="tc-head"><h2>A. 績效 vs 0050</h2><span class="meta">${plabel}贏 0050：<b>${win}/${tot}</b> 檔</span></div>
         <div class="chips">${chips}</div>
         <p class="hint">☑ 左邊打勾的 ETF 會畫進下方「B. 報酬走勢」，和 0050 比較走勢（已選 ${st.sel.length}/${MAX}，<a href="#/active" data-aclear="1">全部取消</a>）</p>
-        <p class="note">${p === "d1" && st.live ? `今日＝盤中即時（證交所 ${esc(st.liveTime || "")}）・` : ""}報酬含息・期間是滾動計算・上市以來和 0050 比同一段期間（不滿一年是累積、滿一年年化）・資金流向＝受益權單位數變化×淨值，* ＝資料從 11/05 起、不滿整段</p></section>
+        <p class="note">${st.live ? `盤中即時（證交所 ${esc(st.liveTime || "")}），報酬算到現在・` : ""}報酬含息・期間是滾動計算・上市以來和 0050 比同一段期間（不滿一年是累積、滿一年年化）・資金流向＝受益權單位數變化×淨值，* ＝資料從 11/05 起、不滿整段</p></section>
       ${t.html}
       <section class="card"><div class="tc-head"><h2>B. 報酬走勢</h2><div class="chips">${chips2}</div></div>
         ${st.sel.length ? `<div class="legend" id="alegend"></div><div class="chart" id="achart"></div>` : '<p class="empty">在上面的表格勾選 ETF（最多 8 檔），和 0050 一起比較</p>'}

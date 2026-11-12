@@ -21,7 +21,10 @@ function syncCodePicker() {
   if (Theme.isHex(cur)) codeEl.value = cur;
   codeReset.hidden = !custom;
 }
-codeEl.addEventListener("input", () => { Theme.applyCode(codeEl.value); Theme.saveCode(codeEl.value); codeReset.hidden = false; });
+// input＝拖動時；change＝關掉調色盤時（有些瀏覽器拖動時不送 input），兩個都存
+const onCode = () => { Theme.applyCode(codeEl.value); Theme.saveCode(codeEl.value); codeReset.hidden = false; };
+codeEl.addEventListener("input", onCode);
+codeEl.addEventListener("change", onCode);
 codeReset.addEventListener("click", () => { Theme.applyCode(null); Theme.saveCode(null); syncCodePicker(); });
 syncCodePicker();
 document.getElementById("nav").innerHTML = Router.NAV.map(([k, l]) => `<a href="#/${k}" data-route="${k}">${l}</a>`).join("");
@@ -48,8 +51,10 @@ const loadCandles = code => loadOr(state.candles, code, `v2/candles/${encodeURIC
 const loadDetail = code => loadOr(state.details, code, `v2/etf/${encodeURIComponent(code)}.json`, null);
 
 // 收盤資料＋即時資料（即時比收盤新才覆蓋）
+// 收盤資料＋即時；有即時成交價的，各期間報酬也加上今天的漲跌（算到現在，使用者 2026-11-12）
 function current() {
-  return { ...state.base, etfs: Live.mergeOverview(state.base, state.live) };
+  const etfs = Live.mergeOverview(state.base, state.live).map(e => e.livePx && e.ret ? { ...e, ret: Core.liveRet(e.ret, e.chg_pct) } : e);
+  return { ...state.base, etfs };
 }
 
 let renderSeq = 0, shownCode = null;
@@ -78,7 +83,7 @@ async function render() {
       const [adata, radar] = await Promise.all([loadSite("active.json"), loadSite("radar.json")]);
       if (params.get("sel") && !state.act.sel.length) state.act.sel = params.get("sel").split(",").slice(0, Act.MAX);   // 分享連結用
       // 盤中：「今日」用即時漲跌（每 20 秒更新，見 pollLive）
-      const live = Live.isNewer(state.live, state.base.price_date) ? Object.fromEntries(o.etfs.map(e => [e.code, e.chg_pct])) : null;
+      const live = Live.isNewer(state.live, state.base.price_date) ? Object.fromEntries(o.etfs.filter(e => e.livePx).map(e => [e.code, e.chg_pct])) : null;
       html = Act.page(adata, radar, { ...state.act, sort: state.sort.act, range: state.range, live, liveTime: live && state.live.time });
       draw = () => {
         const el = document.getElementById("achart");
@@ -337,7 +342,7 @@ async function pollLive() {
   const typing = document.activeElement && document.activeElement.matches && document.activeElement.matches("#app input, #app select");
   const r0 = Router.parse(location.hash).route;
   // 今日焦點、主動式專區（選「今日」時）整頁重畫
-  if (state.base && (r0 === "today" || (r0 === "active" && state.act.period === "d1")) && Live.isNewer(state.live, state.base.price_date)) { if (!typing) render(); return; }
+  if (state.base && (r0 === "today" || r0 === "rank" || r0 === "active") && Live.isNewer(state.live, state.base.price_date)) { if (!typing) render(); return; }
   if (!state.base || !shownCode || !Live.isNewer(state.live, state.base.price_date)) return;
   const e = current().etfs.find(x => x.code === shownCode);
   const px = document.getElementById("live-px"), chg = document.getElementById("live-chg"), asof = document.getElementById("live-asof");
