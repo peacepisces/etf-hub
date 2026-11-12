@@ -8,6 +8,8 @@
   --t-ytd: #c98500; --t-y1: #3987e5; --t-yld: #d55181; --t-aum: #199e70;
   /* 圓餅圖：藍、粉紅、黃、青綠（validator 深色全過），其他＝中性灰 */
   --d1: #3987e5; --d2: #d55181; --d3: #c98500; --d4: #199e70; --d-other: #5b6475;
+  /* 代號：藍色，避開紅漲綠跌、也和金色按鈕分開 */
+  --code: #6ea8fe;
   --sans: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   color-scheme: dark;
@@ -19,7 +21,7 @@
   --up: #d42a37; --down: #0f8a57; --up-bg: rgba(212,42,55,.08); --down-bg: rgba(15,138,87,.08);
   --zebra: rgba(0,0,0,.025); --hover: #eef1f6;
   --t-ytd: #b07400; --t-y1: #2a78d6; --t-yld: #d6457f; --t-aum: #118c60;
-  --d1: #2a78d6; --d2: #d6457f; --d3: #b07400; --d4: #118c60; --d-other: #c3c8d1;
+  --d1: #2a78d6; --d2: #d6457f; --d3: #b07400; --d4: #118c60; --d-other: #c3c8d1; --code: #2563c9;
   color-scheme: light } }
 :root[data-theme="light"] {
   --bg: #f5f6f8; --panel: #ffffff; --panel-2: #f0f2f5; --line: #e1e4ea;
@@ -27,7 +29,7 @@
   --up: #d42a37; --down: #0f8a57; --up-bg: rgba(212,42,55,.08); --down-bg: rgba(15,138,87,.08);
   --zebra: rgba(0,0,0,.025); --hover: #eef1f6;
   --t-ytd: #b07400; --t-y1: #2a78d6; --t-yld: #d6457f; --t-aum: #118c60;
-  --d1: #2a78d6; --d2: #d6457f; --d3: #b07400; --d4: #118c60; --d-other: #c3c8d1;
+  --d1: #2a78d6; --d2: #d6457f; --d3: #b07400; --d4: #118c60; --d-other: #c3c8d1; --code: #2563c9;
   color-scheme: light }
 /* 米色：淺色系、暖色紙張感，晚上看比較不刺眼 */
 :root[data-theme="warm"] {
@@ -36,21 +38,21 @@
   --up: #b8282f; --down: #1d7346; --up-bg: rgba(184,40,47,.09); --down-bg: rgba(29,115,70,.09);
   --zebra: rgba(80,50,0,.035); --hover: #f0e6d2;
   --t-ytd: #a86c00; --t-y1: #2a6fc4; --t-yld: #c43f74; --t-aum: #107f57;
-  --d1: #2a6fc4; --d2: #c43f74; --d3: #a86c00; --d4: #107f57; --d-other: #cbbd9f;
+  --d1: #2a6fc4; --d2: #c43f74; --d3: #a86c00; --d4: #107f57; --d-other: #cbbd9f; --code: #1f5aa8;
   color-scheme: light }
 /* 深藍：深色系、偏藍的底 */
 :root[data-theme="navy"] {
   --bg: #0a1324; --panel: #101c33; --panel-2: #15233f; --line: #22314f;
   --fg: #e4eaf5; --muted: #8d9cb8; --accent: #f0b54a; --accent-bg: rgba(240,181,74,.18);
   --up: #ff6b70; --down: #3ccb8a; --up-bg: rgba(255,107,112,.13); --down-bg: rgba(60,203,138,.13);
-  --zebra: rgba(255,255,255,.03); --hover: #1a2a48;
+  --zebra: rgba(255,255,255,.03); --hover: #1a2a48; --code: #8cc0ff;
   color-scheme: dark }
 /* 高對比：純黑底、白字、亮色，字最清楚 */
 :root[data-theme="contrast"] {
   --bg: #000000; --panel: #0b0b0b; --panel-2: #161616; --line: #4a4a4a;
   --fg: #ffffff; --muted: #c7c7c7; --accent: #ffd24a; --accent-bg: rgba(255,210,74,.22);
   --up: #ff6b6b; --down: #40e08f; --up-bg: rgba(255,107,107,.16); --down-bg: rgba(64,224,143,.16);
-  --zebra: rgba(255,255,255,.05); --hover: #222222;
+  --zebra: rgba(255,255,255,.05); --hover: #222222; --code: #7ab8ff;
   color-scheme: dark }
 
 * { box-sizing: border-box; }
@@ -88,7 +90,7 @@ footer a { text-decoration: underline; }
 .lead { color: var(--muted); font-size: 13px; margin: 14px 0 8px; }
 .note { color: var(--muted); font-size: 12px; }
 h2 { font-size: 16px; font-weight: 700; margin: 22px 0 8px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.code { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--accent); margin-left: 6px; }
+.code { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--code); margin-left: 6px; }
 .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .up { color: var(--up); } .down { color: var(--down); } .muted { color: var(--muted); } .est { color: var(--accent); }
 .empty { color: var(--muted); padding: 24px 14px; text-align: center; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
@@ -227,7 +229,7 @@ h2 { font-size: 16px; font-weight: 700; margin: 22px 0 8px; display: flex; align
 .pf-item { display: inline-flex; align-items: center; gap: 6px; background: var(--panel-2); border-radius: 8px; padding: 4px 8px; font-size: 13px; }
 .pf-item button { background: none; border: 0; color: var(--muted); cursor: pointer; }
 /* 代號獨立一欄（使用者 2026-11-12）：等寬粗體、強調色，固定在最左邊 */
-.tbl td.code-col { font-family: var(--mono); font-weight: 700; font-size: 13.5px; color: var(--accent); }
+.tbl td.code-col { font-family: var(--mono); font-weight: 700; font-size: 13.5px; color: var(--code); }
 .tbl .code-col .cc { display: flex; align-items: center; gap: 6px; cursor: pointer; }
 .tbl .code-col .cc input { margin: 0; }
 /* 配息頁（第 4 階段） */
@@ -281,7 +283,7 @@ main:has(.pf-dock.open) { padding-bottom: 70vh; }
 .pf-tbl th { font-size: 12px; font-weight: 500; color: var(--muted); text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 .pf-tbl td { padding: 4px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 .pf-tbl .r { text-align: right; }
-.pf-tbl .code-c a { font-family: var(--mono); font-weight: 600; color: var(--accent); }
+.pf-tbl .code-c a { font-family: var(--mono); font-weight: 600; color: var(--code); }
 .pf-tbl .name-c { white-space: normal; min-width: 7em; }
 .pf-tbl input { width: 70px; font: inherit; font-family: var(--mono); text-align: right; background: var(--panel-2); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; }
 .pf-tbl tfoot td { font-weight: 700; border-bottom: 0; }
