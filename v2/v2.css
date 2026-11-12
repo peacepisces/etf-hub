@@ -292,8 +292,11 @@ main:has(.pf-dock.open) { padding-bottom: 70vh; }
 .pf-tbl .name-c { white-space: normal; min-width: 7em; }
 .pf-tbl input { width: 70px; font: inherit; font-family: var(--mono); text-align: right; background: var(--panel-2); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; }
 .pf-tbl tfoot td { font-weight: 700; border-bottom: 0; }
-.pf-del { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 15px; }
-.pf-del:hover { color: var(--up); }
+/* 移除鈕：最左邊、有外框的小方塊，滑過變紅（使用者 2026-11-12：原本右邊淡淡的 × 不明顯） */
+.pf-tbl td.del-c { width: 30px; padding-right: 0; }
+.pf-del { width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; background: var(--panel-2);
+  border: 1px solid var(--line); border-radius: 6px; color: var(--fg); cursor: pointer; font-size: 15px; line-height: 1; }
+.pf-del:hover, .pf-del:focus-visible { color: #fff; background: var(--up); border-color: var(--up); }
 .pf-body .pf-months { grid-template-columns: repeat(12, 1fr); }
 .pf-body .pf-m { padding: 4px 6px; } .pf-body .pf-m b { font-size: 12px; }
 @media (max-width: 900px) { .pf-body .pf-months { grid-template-columns: repeat(6, 1fr); } }

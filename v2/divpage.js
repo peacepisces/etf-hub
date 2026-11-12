@@ -128,16 +128,16 @@ const Div = (() => {
     const search = `<form class="pf-add" data-pf-form><input type="search" name="q" list="pf-list" placeholder="搜尋加入：代號或名稱，例 00878" autocomplete="off" enterkeyhint="done" aria-label="搜尋 ETF 加入組合">
       <button type="submit">加入</button><span class="muted" data-pf-msg></span><datalist id="pf-list">${opts}</datalist></form>`;
     const money = v => v === null ? dash : num(v, 0);
-    const body = rows.map(r => `<tr><td class="code-c"><a href="#/etf/${encodeURIComponent(r.code)}">${esc(r.code)}</a></td><td class="name-c">${esc(r.name)}</td>
+    const body = rows.map(r => `<tr><td class="del-c"><button type="button" class="pf-del" data-pf-del="${esc(r.code)}" aria-label="移除 ${esc(r.code)}" title="從組合移除">×</button></td><td class="code-c"><a href="#/etf/${encodeURIComponent(r.code)}">${esc(r.code)}</a></td><td class="name-c">${esc(r.name)}</td>
       <td class="r"><input type="number" min="0" step="1" inputmode="numeric" value="${r.lots}" data-pf-lots="${esc(r.code)}" aria-label="${esc(r.code)} 張數"> 張</td>
       <td class="r num px-c">${r.price === null ? dash : num(r.price)}</td><td class="r num">${money(r.cost)}</td><td class="r num">${num(r.div, 0)}</td>
       <td class="r num">${isNum(r.yld) ? num(r.yld) + "%" : dash}</td>
-      <td><button type="button" class="pf-del" data-pf-del="${esc(r.code)}" aria-label="移除 ${esc(r.code)}">×</button></td></tr>`).join("");
+</tr>`).join("");
     const knownDiv = known.reduce((s, r) => s + r.div, 0);
-    const foot = rows.length ? `<tfoot><tr><td colspan="3">合計${known.length < rows.length ? `（${rows.length - known.length} 檔沒有價格，本金沒算進去）` : ""}</td>
-      <td class="px-c"></td><td class="r num">${num(cost, 0)}</td><td class="r num">${num(total, 0)}</td><td class="r num">${cost ? num(knownDiv / cost * 100) + "%" : dash}</td><td></td></tr></tfoot>` : "";
+    const foot = rows.length ? `<tfoot><tr><td colspan="4">合計${known.length < rows.length ? `（${rows.length - known.length} 檔沒有價格，本金沒算進去）` : ""}</td>
+      <td class="px-c"></td><td class="r num">${num(cost, 0)}</td><td class="r num">${num(total, 0)}</td><td class="r num">${cost ? num(knownDiv / cost * 100) + "%" : dash}</td></tr></tfoot>` : "";
     const table = rows.length
-      ? `<div class="pf-tbl-wrap"><table class="pf-tbl"><thead><tr><th>代號</th><th>名稱</th><th class="r">張數</th><th class="r px-c">現價</th><th class="r">本金</th><th class="r">年股利</th><th class="r">殖利率</th><th></th></tr></thead><tbody>${body}</tbody>${foot}</table></div>`
+      ? `<div class="pf-tbl-wrap"><table class="pf-tbl"><thead><tr><th></th><th>代號</th><th>名稱</th><th class="r">張數</th><th class="r px-c">現價</th><th class="r">本金</th><th class="r">年股利</th><th class="r">殖利率</th></tr></thead><tbody>${body}</tbody>${foot}</table></div>`
       : `<p class="empty">還沒有 ETF：上面搜尋，或勾表格左邊的方塊</p>`;
     const months = Array.from({ length: 12 }, (_, i) => i + 1).map(i => `<div class="pf-m${m[i].amount ? "" : " zero"}"><span>${i} 月</span>
       <b>${m[i].amount ? num(m[i].amount, 0) : "—"}${m[i].announced ? "*" : ""}</b></div>`).join("");
