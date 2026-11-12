@@ -204,7 +204,13 @@ app.addEventListener("click", ev => {
   if (ot) {
     if (ot.dataset.otab) state.rk.tab = ot.dataset.otab;
     if (ot.dataset.ogo) {
-      const [, per, chips] = ot.dataset.ogo.split("|");
+      const [kind, per, chips] = ot.dataset.ogo.split("|");
+      if (kind === "div") {   // 殖利率卡 → 配息頁那一類、依殖利率排
+        state.div.f = { kind: per, freq: "" };
+        state.sort.div = { key: "yield", dir: -1 };
+        location.hash = "#/dividend";
+        return;
+      }
       state.rk.tab = "ret";
       state.sort.rank = { key: "r_" + per, dir: -1 };
       state.rk.chips = chips ? chips.split(",") : [];

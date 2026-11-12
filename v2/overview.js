@@ -65,23 +65,31 @@ const Ovw = (() => {
     ["主動式", ["主動"], "ret"], ["市值型", ["市值型"], "ret"], ["高股息", ["高股息"], "ret"], ["債券", ["債"], "ret"],
     ["最吸金", [], "flow"], ["成交爆量", [], "ratio"]];
   const BOARD_PERIODS = R.PERIODS.filter(([k]) => k !== "y3");
+  // 高股息、債券卡多一個「殖利率」（舊版有，使用者 2026-11-12）；連到配息頁的哪一類
+  const YIELD_BOARDS = { 高股息: "high", 債券: "bond" };
 
   function board(o, f, fees, st) {
     const cards = BOARDS.map(([title, chips, ind]) => {
-      const p = ind === "ret" ? (st.board[title] || "ytd") : "d1";
-      const rows = R.filter(R.rows(o, f, fees, p), chips);
-      const val = r => r[ind];
-      const ok = ind === "ratio" ? (r => isNum(r.ratio) && r.value >= 5e7) : (r => isNum(val(r)));   // 爆量：成交 5 千萬以上才算
+      const yb = YIELD_BOARDS[title];
+      let p = ind === "ret" ? (st.board[title] || "ytd") : "d1";
+      if (p === "yield" && !yb) p = "ytd";
+      const k = p === "yield" ? "yield" : ind;
+      const rows = R.filter(R.rows(o, f, fees, p === "yield" ? "ytd" : p), chips);
+      const val = r => r[k];
+      // 爆量：成交 5 千萬以上才算；殖利率：上市未滿一年的預估值不列（常是一次配息推算，會偏高）
+      const ok = k === "ratio" ? (r => isNum(r.ratio) && r.value >= 5e7) : k === "yield" ? (r => isNum(r.yield) && !r.yield_est) : (r => isNum(val(r)));
       const top = rows.filter(ok).sort((a, b) => val(b) - val(a)).slice(0, 5);
-      const show = ind === "ret" ? (r => pct(r.ret)) : ind === "flow" ? (r => signedMoney(r.flow)) : (r => `${num(r.ratio, 1)} 倍`);
-      const sel = ind === "ret" ? `<select data-oboard="${esc(title)}" aria-label="${esc(title)} 期間">${BOARD_PERIODS.map(([k, l]) =>
-        `<option value="${k}"${k === p ? " selected" : ""}>${l}</option>`).join("")}</select>` : `<span class="meta">${ind === "flow" ? "今日" : "今天 ÷ 前 20 日均量"}</span>`;
-      const go = ind === "ret" ? `ret|${p}|${chips.join(",")}` : "";
+      const show = k === "ret" ? (r => pct(r.ret)) : k === "yield" ? (r => `${num(r.yield)}%`) : k === "flow" ? (r => signedMoney(r.flow)) : (r => `${num(r.ratio, 1)} 倍`);
+      const opts = BOARD_PERIODS.concat(yb ? [["yield", "殖利率"]] : []);
+      const sel = ind === "ret" ? `<select data-oboard="${esc(title)}" aria-label="${esc(title)} 期間">${opts.map(([v, l]) =>
+        `<option value="${v}"${v === p ? " selected" : ""}>${l}</option>`).join("")}</select>` : `<span class="meta">${ind === "flow" ? "今日" : "今天 ÷ 前 20 日均量"}</span>`;
+      const go = k === "yield" ? `div|${yb}` : ind === "ret" ? `ret|${p}|${chips.join(",")}` : "";
+      const goLabel = k === "yield" ? "看配息頁 →" : "看報酬比較 →";
       return `<section class="card bd"><div class="tc-head"><h2>${esc(title)}</h2>${sel}</div>
         <ol class="toplist">${top.map(r => `<li><a href="${href(r.code)}"><span class="code">${esc(r.code)}</span> ${esc(r.name)}</a><b>${show(r)}</b></li>`).join("") || '<li class="muted">資料不足</li>'}</ol>
-        ${go ? `<button type="button" class="more" data-ogo="${esc(go)}">看報酬比較 →</button>` : ""}</section>`;
+        ${go ? `<button type="button" class="more" data-ogo="${esc(go)}">${goLabel}</button>` : ""}</section>`;
     }).join("");
-    return `<div class="tgrid">${cards}</div><p class="note">含息報酬＝股價＋領到的配息（不再投入）・盤中算到現在</p>`;
+    return `<div class="tgrid">${cards}</div><p class="note">含息報酬＝股價＋領到的配息（不再投入）・盤中算到現在・殖利率＝近一年配息 ÷ 現價，上市未滿一年的預估值不列入</p>`;
   }
 
   // ---------- 報酬比較：各期間含息報酬（股價＋配息，不再投入）＋成立以來年化、費用、規模 ----------
