@@ -67,7 +67,7 @@ const Pages = (() => {
     } else {
       chart = `<div class="chart-tools">${modes}<div class="chips">${chips}</div></div>${kline(v.candles)}`;
     }
-    const tab = v.tab || "ops";
+    const tab = v.tab || "holdings";
     const body = tab === "holdings" ? Detail.holdings(v.d, v.hview, v.hsort, v.d0050)
       : tab === "premium" ? Detail.premium(v.d) : tab === "dividend" ? Detail.dividend(v.d)
         : tab === "info" ? Detail.info(e, v.d) : Detail.ops(v.d, v.filter);

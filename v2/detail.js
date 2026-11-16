@@ -10,7 +10,7 @@ const Detail = (() => {
   const { esc, isNum, dash, num, pct, aum, shortDate } = C;
   const ym = d => d ? `${d.slice(0, 4)}/${d.slice(5, 7)}` : "—";
   const ymd = d => d ? d.replaceAll("-", "/") : "—";
-  const TABS = [["ops", "操作日報"], ["holdings", "成分股"], ["premium", "折溢價"], ["dividend", "配息"], ["info", "基本資料與費用"]];
+  const TABS = [["holdings", "成分股"], ["ops", "操作日報"], ["premium", "折溢價"], ["dividend", "配息"], ["info", "基本資料與費用"]];
   const NO_HOLDINGS = '<p class="empty">這檔沒有持股資料（債券、期貨型或投信沒有公布）</p>';
 
   function money(v) {
