@@ -63,7 +63,7 @@ const Ovw = (() => {
     const chips = R.CHIP_GROUPS.map(g => g.map(([l]) => `<button type="button" data-rchip="${esc(l)}" aria-pressed="${(st.chips || []).includes(l)}">${esc(l)}</button>`).join("")).join('<span class="sep"></span>');
     const vday = f && f.end ? C.shortDate(f.end) : C.shortDate(o.price_date);
     const t = TB.render("quote", quoteCols(vday), list, st.sort, { rowLink: r => href(r.code) });
-    const asof = live ? `盤中即時（證交所 ${esc(live)}），淨值是預估` : `${C.shortDate(o.price_date)} 收盤`;
+    const asof = live ? `盤中即時（證交所 ${esc(live)}），淨值是預估` : `${C.shortDate(o.price_date)} 收盤・淨值是投信預估（正式淨值隔天更新）`;
     return `<section class="card"><div class="ov-tools">
         <input type="search" data-oq value="${esc(st.q || "")}" placeholder="篩選：代號或名稱" aria-label="篩選代號或名稱" autocomplete="off">
         <select data-oissuer aria-label="投信"><option value="">全部投信</option>${issuers.map(i => `<option${i === st.issuer ? " selected" : ""}>${esc(i)}</option>`).join("")}</select></div>

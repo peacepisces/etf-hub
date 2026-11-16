@@ -49,7 +49,7 @@ const Detail = (() => {
       <div class="px-line"><span class="px" id="live-px">${num(e.price)}</span><span id="live-chg">${pct(e.chg_pct)}</span>
         <span class="meta" id="live-asof">${e.live ? '<span class="live-tag">即時</span>' : `${shortDate(e.pdate)} 收盤`}</span></div>
       <div class="kv">
-        <span>淨值 <b>${num(e.nav)}</b></span><span>折溢價 <b>${pct(e.premium)}</b></span>
+        <span title="投信當天的預估淨值；正式淨值隔天公布（海外 ETF 要等國外市場交易結束）">預估淨值 <b>${num(e.nav)}</b></span><span>折溢價 <b>${pct(e.premium)}</b></span>
         <span>規模 <b>${aum(e.aum)}</b></span><span>殖利率 <b>${esc(yieldText)}</b></span></div>
       <div class="rets">${cells.map(([l, v]) => `<div><span>${l}</span><b>${v}</b></div>`).join("")}
         <div class="boxed"><span>${esc(sl)}</span><b>${sv}</b></div>
@@ -171,7 +171,10 @@ const Detail = (() => {
   function premium(d) {
     const p = (d && d.premium) || [];
     if (!p.length) return '<p class="empty">沒有淨值資料</p>';
-    const note = p.length < 20 ? `<p class="note">資料自 ${ymd(p[0][0])} 起（證交所淨值從這天開始收集）</p>` : "";
+    // 淨值：以前的日子是正式淨值（證交所隔天公布的「前一日淨值」），最新一天是投信預估；折溢價：證交所公布、用台股收盤當下的預估淨值
+    // （海外 ETF 的正式淨值要等國外收盤，拿台股收盤價比會時差錯開，所以不用正式淨值重算，使用者 2026-11-16）
+    const note = `<p class="note">淨值：最新一天是投信預估，之前是正式淨值・折溢價：證交所公布（台股收盤當下的預估淨值），`
+      + `海外 ETF 的正式淨值要等國外收盤才算，所以「股價÷淨值」和折溢價會差一點${p.length < 20 ? `・資料自 ${ymd(p[0][0])} 起` : ""}</p>`;
     const rows = p.slice().reverse().map(r => `<tr><td class="sticky">${ymd(r[0])}</td><td class="r num">${num(r[1])}</td>
       <td class="r num">${num(r[2], r[2] % 1 && String(r[2]).split(".")[1]?.length > 2 ? 4 : 2)}</td><td class="r num">${pct(r[3])}</td></tr>`).join("");
     return `${note}<section class="card"><div class="legend" id="prem-legend"></div><div class="chart short" id="prem-bars"></div>
