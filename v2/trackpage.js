@@ -82,7 +82,7 @@ const Track = (() => {
       : !rows.length ? '<p class="empty">沒有 ETF 符合</p>'
       : TB.render("multi", cols, rows, sort, { rowLink: r => `#/etf/${encodeURIComponent(r.c)}` }).html;
     return `<section class="card"><h2>個股反查（可多檔）</h2>
-      <form class="watch-add" data-multi-form><input name="q" value="${esc(st.q)}" placeholder="例如 2330 2454 NVDA US" autocomplete="off"><button type="submit">查詢</button></form>
+      <form class="watch-add" data-multi-form><input name="q" value="${esc(st.q)}" placeholder="代號或名稱，例如 2330 聯發科" autocomplete="off" data-suggest="stock"><button type="submit">查詢</button><div class="suggest" hidden></div></form>
       <div class="chips" style="margin-top:6px"><button type="button" data-mmode="all" aria-pressed="${st.mode === "all"}">全部都持有</button>
         <button type="button" data-mmode="any" aria-pressed="${st.mode === "any"}">至少持有一檔</button></div>
       <p class="note">各 ETF 最新持股日的權重・${rows.length} 檔 ETF</p></section>${table}`;
@@ -91,7 +91,7 @@ const Track = (() => {
   function overlapSection(index, st, details) {
     const sel = st.osel;
     const names = new Map(((index && index.etfs) || []).map(e => [e.c, e.n]));
-    const pick = `<form class="watch-add" data-ov-form><input name="code" placeholder="加入 ETF 代號（選 2 檔以上）" autocomplete="off"><button type="submit">加入</button></form>
+    const pick = `<form class="watch-add" data-ov-form><input name="code" placeholder="ETF 代號或名稱（選 2 檔以上）" autocomplete="off" data-suggest="etf"><button type="submit">加入</button><div class="suggest" hidden></div></form>
       <div class="pf-items">${sel.map(c => `<span class="pf-item">${esc(names.get(c) || c)}<span class="code">${esc(c)}</span>
         <button type="button" data-ov-del="${esc(c)}" aria-label="移除">×</button></span>`).join("")}</div>`;
     let body = '<p class="empty">選 2 檔以上 ETF 看重疊</p>';

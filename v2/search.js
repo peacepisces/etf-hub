@@ -29,7 +29,12 @@ const Search = (() => {
   // 注音、拼音選字中的按鍵（Safari 確認選字的 Enter 會是 keyCode 229、isComposing 卻是 false）
   const composing = ev => !!ev.isComposing || ev.keyCode === 229;
 
-  return { match, composing };
+  // 多檔輸入框（例「2454 23」）：只拿最後一段找候選，選了就把最後一段換成代號（使用者 2026-11-16）
+  const TAIL = /[^\s,，、]*$/;
+  const lastToken = v => String(v || "").match(TAIL)[0];
+  const replaceLast = (v, code) => String(v || "").replace(TAIL, "") + code + " ";
+
+  return { match, composing, lastToken, replaceLast };
 })();
 
 if (typeof module !== "undefined") module.exports = Search;

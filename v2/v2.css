@@ -211,6 +211,9 @@ h2 { font-size: 16px; font-weight: 700; margin: 22px 0 8px; display: flex; align
 .ptile.watch { outline: 1px dashed var(--line); }
 .ptile .x { background: none; border: 0; color: var(--muted); cursor: pointer; padding: 0 2px; font-size: 14px; line-height: 1; }
 .watch-add { display: flex; gap: 6px; margin-top: 10px; }
+.watch-add { position: relative; }
+.watch-add .suggest a { cursor: pointer; }
+.watch-add .suggest { right: auto; width: min(380px, calc(100vw - 32px)); max-height: 50vh; }
 .watch-add input { font: inherit; font-size: 13px; background: var(--panel-2); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; width: 180px; }
 .watch-add button, .chk { font: inherit; font-size: 13px; }
 .watch-add button { background: var(--panel-2); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 4px 12px; cursor: pointer; }

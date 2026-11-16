@@ -330,8 +330,8 @@ app.addEventListener("submit", ev => {
   if (of) {
     ev.preventDefault();
     const code = (of.code.value || "").trim().toUpperCase();
-    if (state.base.etfs.some(e => e.code === code) && !state.track.osel.includes(code) && state.track.osel.length < 6) state.track.osel.push(code);
-    render();
+    if (state.base.etfs.some(e => e.code === code)) addOverlap(code);
+    else if (ps.hits[0]) pickSuggest(ps.hits[0]);   // 打名稱直接按加入：用第一個候選
     return;
   }
   const f = ev.target.closest("form[data-watch-form]");
@@ -442,6 +442,61 @@ q.addEventListener("keydown", ev => {
 });
 box.addEventListener("click", ev => { if (ev.target.closest("a")) { q.value = ""; closeSuggest(); } });
 document.addEventListener("click", ev => { if (!ev.target.closest(".search")) closeSuggest(); });
+
+// ---------- 頁內輸入框的候選：持股重疊選 ETF、個股反查選股票（使用者 2026-11-16） ----------
+// 輸入框有 data-suggest="etf"｜"stock"，同一個 form 裡放 <div class="suggest">。個股反查可多檔，只拿最後一段找。
+const ps = { input: null, hits: [], cursor: 0 };
+function showPageSuggest(input) {
+  const box = input.form && input.form.querySelector(".suggest");
+  if (!box || !state.index) return;
+  const etf = input.dataset.suggest === "etf";
+  const token = etf ? input.value : Search.lastToken(input.value);
+  const r = Search.match(state.index, token, 30);
+  ps.input = input; ps.cursor = 0;
+  ps.hits = etf ? r.etfs.filter(e => !state.track.osel.includes(e.c)).map(e => ({ code: e.c,
+      main: `${Core.esc(e.n)}<span class="code">${Core.esc(e.c)}</span>`, sub: `${Core.esc(e.m)}・${Core.esc(e.t)}` }))
+    : r.stocks.map(x => ({ code: x.s, main: `${Core.esc(x.n || x.s)}<span class="code">${Core.esc(x.s)}</span>`, sub: `被 ${x.count} 檔 ETF 持有` }));
+  if (!token.trim()) { box.hidden = true; return; }
+  box.innerHTML = ps.hits.map((h, i) => `<a role="option" data-pick="${i}" class="${i === ps.cursor ? "on" : ""}"><span>${h.main}</span><span class="sub">${h.sub}</span></a>`).join("")
+    || `<div class="none">找不到符合的${etf ? " ETF" : "股票"}</div>`;
+  box.hidden = false;
+}
+function hidePageSuggest() { document.querySelectorAll("#app .suggest").forEach(b => { b.hidden = true; }); ps.hits = []; }
+function addOverlap(code) {
+  if (!state.track.osel.includes(code) && state.track.osel.length < 6) state.track.osel.push(code);
+  render().then(() => { const n = document.querySelector("form[data-ov-form] input"); if (n) n.focus(); });
+}
+function pickSuggest(h) {
+  const input = ps.input;
+  hidePageSuggest();
+  if (!input) return;
+  if (input.dataset.suggest === "etf") { addOverlap(h.code); return; }
+  input.value = Search.replaceLast(input.value, h.code);   // 個股反查：填進去，可以再打下一檔，按查詢才查
+  input.focus();
+}
+app.addEventListener("focusin", ev => {
+  const i = ev.target.closest("input[data-suggest]");
+  if (i) loadIndex().then(() => showPageSuggest(i), () => {});
+});
+app.addEventListener("input", ev => { if (ev.target.matches("input[data-suggest]") && !ev.isComposing) showPageSuggest(ev.target); });
+app.addEventListener("compositionend", ev => { if (ev.target.matches("input[data-suggest]")) showPageSuggest(ev.target); });
+app.addEventListener("keydown", ev => {
+  if (!ev.target.matches("input[data-suggest]") || Search.composing(ev)) return;
+  const box = ev.target.form.querySelector(".suggest");
+  if (!box || box.hidden) return;
+  if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
+    ev.preventDefault();
+    ps.cursor = (ps.cursor + (ev.key === "ArrowDown" ? 1 : -1) + ps.hits.length) % Math.max(ps.hits.length, 1);
+    box.querySelectorAll("a").forEach((a, i) => a.classList.toggle("on", i === ps.cursor));
+  } else if (ev.key === "Enter" && ps.hits[ps.cursor]) { ev.preventDefault(); pickSuggest(ps.hits[ps.cursor]); }
+  else if (ev.key === "Escape") hidePageSuggest();
+});
+// mousedown（不是 click）：點候選時輸入框還沒失焦，才拿得到 ps.input
+app.addEventListener("mousedown", ev => {
+  const a = ev.target.closest(".suggest a[data-pick]");
+  if (a) { ev.preventDefault(); pickSuggest(ps.hits[+a.dataset.pick]); }
+});
+document.addEventListener("click", ev => { if (!ev.target.closest(".watch-add")) hidePageSuggest(); });
 
 window.addEventListener("hashchange", () => { render().then(() => window.scrollTo(0, 0)); });
 render();
