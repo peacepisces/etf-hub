@@ -3,6 +3,7 @@
 // 格子用該欄顏色打底，名稱欄加文字標籤（例「今年①」），不只靠顏色（使用者 2026-11-10）。
 // cols: {key, label, get(row) → 排序值, html(row, i) → 顯示, r: 靠右, text: 文字欄, cls: 額外 class（例 "mo" 月份細線）,
 //        tags: 前 3 名標籤放這欄（名稱欄；代號獨立一欄後，代號欄太窄放不下，使用者 2026-11-12）,
+//        sub: 表頭第二行小字（例 股票代號）,
 //        top: 顏色代號（css 的 t-<top>）, tag: 標籤文字}
 "use strict";
 
@@ -48,7 +49,7 @@ const V2Table = (() => {
     const cls = (c, i, extra = "") => [i === 0 ? "sticky" : "", c.r ? "r num" : "", c.cls || "", extra].filter(Boolean).join(" ");
     const th = (c, i, extra = "") => {
       const on = col && c.key === col.key;
-      return `<th class="${cls(c, i, (c.get ? "sortable" : "") + (on ? " sorted" : ""))}"${extra}${c.get ? ` data-sort="${esc(c.key)}" data-table="${esc(id)}"` : ""}>${esc(c.label)}${on ? (s.dir > 0 ? " ▲" : " ▼") : ""}</th>`;
+      return `<th class="${cls(c, i, (c.get ? "sortable" : "") + (on ? " sorted" : ""))}"${extra}${c.get ? ` data-sort="${esc(c.key)}" data-table="${esc(id)}"` : ""}>${esc(c.label)}${on ? (s.dir > 0 ? " ▲" : " ▼") : ""}${c.sub ? `<div class="sub">${esc(c.sub)}</div>` : ""}</th>`;
     };
     // opts.groups：[{label, keys}] 幾欄共用一個上層標題（例「2026 年」蓋 1～12 月）；其他欄跨兩列
     const groupOf = new Map((opts.groups || []).flatMap(g => g.keys.map(k => [k, g])));

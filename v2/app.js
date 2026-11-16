@@ -3,7 +3,7 @@
 
 const app = document.getElementById("app");
 const state = { base: null, index: null, candles: {}, details: {}, live: null, stocks: {},
-                sort: { rank: { key: "r_ytd", dir: -1 }, quote: { key: "code", dir: 1 }, flow: { key: "f_d1", dir: -1 }, tools: { key: "ret", dir: -1 }, stock: { key: "w", dir: -1 }, tag: { key: "ret.ytd", dir: -1 }, hold: { key: "w", dir: -1 }, div: { key: "yield", dir: -1 }, act: { key: "v", dir: -1 }, radar: { key: "buy", dir: -1 } },
+                sort: { rank: { key: "r_ytd", dir: -1 }, quote: { key: "code", dir: 1 }, flow: { key: "f_d1", dir: -1 }, tools: { key: "ret", dir: -1 }, stock: { key: "w", dir: -1 }, tag: { key: "ret.ytd", dir: -1 }, hold: { key: "w", dir: -1 }, div: { key: "yield", dir: -1 }, act: { key: "v", dir: -1 }, radar: { key: "buy", dir: -1 }, multi: { key: "total", dir: -1 } },
                 range: "m3", chartMode: "kline", site: {}, passive: false, div: { f: { kind: "all", freq: "" }, ym: null }, act: { period: "y1", sel: [], issuer: null }, track: { tab: "radar", q: "", mode: "all", osel: [] }, rk: { period: "ytd", chips: [], tab: "quote", q: "", issuer: "", board: {} }, ev: { kind: "" }, tools: { crit: {}, cmp: [] }, tab: "holdings", hview: "stocks", filter: null, chart: null, cols: {}, etfNav: null };
 // 即時：和舊版同一個轉接站、同樣頻率（web/app.js）；本機開發用本機轉接站
 const LIVE_URL = ["localhost", "127.0.0.1"].includes(location.hostname) ? "http://127.0.0.1:8787" : "https://etf-live.peacepisceslamb.workers.dev";
@@ -93,7 +93,7 @@ async function render() {
       const [radar, index] = await Promise.all([loadSite("radar.json"), loadIndex()]);
       const details = {};
       if (state.track.tab === "overlap") for (const c of state.track.osel) details[c] = await loadDetail(c);
-      html = Track.page(radar, index, { ...state.track, passive: state.passive, sort: state.sort.radar }, details);
+      html = Track.page(radar, index, { ...state.track, passive: state.passive, sort: state.sort.radar, msort: state.sort.multi }, details);
     }
     else if (route === "active") {
       const [adata, radar] = await Promise.all([loadSite("active.json"), loadSite("radar.json")]);
@@ -321,7 +321,11 @@ app.addEventListener("submit", ev => {
     return;
   }
   const mf = ev.target.closest("form[data-multi-form]");
-  if (mf) { ev.preventDefault(); state.track.q = mf.q.value; render(); return; }
+  if (mf) {   // 換了股票：原本排的那檔可能不在了，排序回到合計
+    ev.preventDefault();
+    if (state.track.q !== mf.q.value) state.sort.multi = { key: "total", dir: -1 };
+    state.track.q = mf.q.value; render(); return;
+  }
   const of = ev.target.closest("form[data-ov-form]");
   if (of) {
     ev.preventDefault();

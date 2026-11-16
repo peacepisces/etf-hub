@@ -71,11 +71,16 @@ const Track = (() => {
     const codes = parseCodes(st.q);
     const rows = codes.length && index ? multi(index, codes, st.mode) : [];
     const sname = c => ((index && index.stocks[c]) || {}).n || c;
+    // 可點表頭排序（使用者 2026-11-16）；換了股票、原本排序的欄不見了就回到合計由大到小
+    const cols = [
+      { key: "n", label: "ETF", text: 1, get: r => r.n, html: r => `${esc(r.n)}<span class="code">${esc(r.c)}</span>` },
+      ...codes.map(c => ({ key: `w:${c}`, label: sname(c), sub: c, r: 1, get: r => r.w[c],
+        html: r => isNum(r.w[c]) ? `${num(r.w[c])}%` : dash })),
+      { key: "total", label: "合計", r: 1, get: r => r.total, html: r => `<b>${num(r.total)}%</b>` }];
+    const sort = st.sort && cols.some(c => c.key === st.sort.key) ? st.sort : { key: "total", dir: -1 };
     const table = !codes.length ? '<p class="empty">輸入股票代號（可以多檔，用空白或逗號分開，例如 2330 2454）</p>'
       : !rows.length ? '<p class="empty">沒有 ETF 符合</p>'
-      : `<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="sticky">ETF</th>${codes.map(c => `<th class="r">${esc(sname(c))}<div class="sub">${esc(c)}</div></th>`).join("")}
-        <th class="r">合計</th></tr></thead><tbody>${rows.map(r => `<tr class="link" data-href="#/etf/${encodeURIComponent(r.c)}"><td class="sticky">${esc(r.n)}<span class="code">${esc(r.c)}</span></td>
-        ${codes.map(c => `<td class="r num">${isNum(r.w[c]) ? `${num(r.w[c])}%` : dash}</td>`).join("")}<td class="r num"><b>${num(r.total)}%</b></td></tr>`).join("")}</tbody></table></div>`;
+      : TB.render("multi", cols, rows, sort, { rowLink: r => `#/etf/${encodeURIComponent(r.c)}` }).html;
     return `<section class="card"><h2>個股反查（可多檔）</h2>
       <form class="watch-add" data-multi-form><input name="q" value="${esc(st.q)}" placeholder="例如 2330 2454 NVDA US" autocomplete="off"><button type="submit">查詢</button></form>
       <div class="chips" style="margin-top:6px"><button type="button" data-mmode="all" aria-pressed="${st.mode === "all"}">全部都持有</button>
@@ -109,7 +114,7 @@ const Track = (() => {
   function page(radar, index, st, details) {
     const tabs = [["radar", "換股雷達"], ["multi", "個股反查"], ["overlap", "持股重疊"]];
     const nav = `<nav class="tabs">${tabs.map(([k, l]) => `<button type="button" data-ttab="${k}" aria-selected="${st.tab === k}">${l}</button>`).join("")}</nav>`;
-    const body = st.tab === "multi" ? multiSection(index, st) : st.tab === "overlap" ? overlapSection(index, st, details) : radarSection(radar, st);
+    const body = st.tab === "multi" ? multiSection(index, { ...st, sort: st.msort }) : st.tab === "overlap" ? overlapSection(index, st, details) : radarSection(radar, st);
     return `${nav}<div class="tab-body">${body}</div>`;
   }
 
