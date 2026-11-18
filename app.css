@@ -107,3 +107,4 @@ tbody tr.link:hover td { background: var(--panel-2); }
 @keyframes blink { 50% { opacity: .3; } }
 @media (prefers-reduced-motion: reduce) { .live-tag::before { animation: none; } }
 .warn { color: var(--accent); font-size: 13px; margin: 12px 0 4px; }
+.visits { margin-top: 6px; color: var(--muted); font-size: 12px; text-align: center; }
