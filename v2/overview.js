@@ -46,11 +46,14 @@ const Ovw = (() => {
   }
   // 成交金額是每晚更新的（前一個交易日），盤中價格是即時的：欄名標日期，免得以為是今天（使用者 2026-11-12）
   const quoteCols = day => QUOTE_COLS.map(c => c.key === "value" ? { ...c, label: `成交金額（${day}）` } : c);
+  // 投信回報很久沒更新（盤中落後 5 分鐘以上，見 Live.staleTime）：價格旁標灰色時間，免得以為是現在的價格（使用者 2026-11-17）
+  const PRICE_COL = { key: "price", label: "價格", r: 1, get: r => r.price,
+    html: r => num(r.price) + (r.stale ? ` <span class="stale" title="這檔投信 ${esc(r.stale)} 之後沒再回報，價格可能不是現在的">${esc(r.stale)}</span>` : "") };
   const QUOTE_COLS = [
     { key: "code", label: "代號", text: 1, cls: "code-col", get: r => r.code, html: r => esc(r.code) },
     { key: "name", label: "名稱", text: 1, tags: 1, get: r => r.name, html: r => esc(r.name) },
     { key: "issuer", label: "投信", text: 1, get: r => r.issuer, html: r => esc(r.issuer || "—") },
-    { key: "price", label: "價格", r: 1, get: r => r.price, html: r => num(r.price) },
+    PRICE_COL,
     { key: "chg_pct", label: "漲跌", r: 1, get: r => r.chg_pct, html: r => pct(r.chg_pct) },
     { key: "nav", label: "淨值", r: 1, get: r => r.nav, html: r => num(r.nav) },
     { key: "premium", label: "折溢價", r: 1, get: r => r.premium, html: r => pct(r.premium) },
@@ -125,7 +128,7 @@ const Ovw = (() => {
     return [
       { key: "code", label: "代號", text: 1, cls: "code-col", get: r => r.code, html: r => esc(r.code) },
       { key: "name", label: "名稱", text: 1, tags: 1, get: r => r.name, html: r => esc(r.name) },
-      { key: "price", label: "價格", r: 1, get: r => r.price, html: r => num(r.price) },
+      PRICE_COL,
       { key: "chg_pct", label: "漲跌", r: 1, get: r => r.chg_pct, html: r => pct(r.chg_pct) },
       { key: "value", label: `成交金額（${day}）`, r: 1, cls: "sep", get: r => r.value, html: r => money(r.value) },
       { key: "ratio", label: "爆量倍數", r: 1, get: r => r.ratio, html: r => isNum(r.ratio) ? `${num(r.ratio, 1)} 倍` : dash },
@@ -176,7 +179,7 @@ const Ovw = (() => {
     return [
       { key: "code", label: "代號", text: 1, cls: "code-col", get: r => r.code, html: r => esc(r.code) },
       { key: "name", label: "名稱", text: 1, tags: 1, get: r => r.name, html: r => esc(r.name) },
-      { key: "price", label: "價格", r: 1, get: r => r.price, html: r => num(r.price) },
+      PRICE_COL,
       ...RET_PERIODS.map(([k, l]) => ({ key: "r_" + k, label: l, r: 1, cls: k === "d1" ? "" : "", get: r => r["r_" + k], html: r => pct(r["r_" + k]),
         ...(k === "ytd" ? { top: "ytd", tag: "今年" } : k === "y1" ? { top: "y1", tag: "1年" } : {}) })),
       { key: "r_since", label: "成立以來年化", r: 1, cls: "sep", get: r => r.r_since, html: sinceHtml, top: "yld", tag: "年化" },

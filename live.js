@@ -20,6 +20,16 @@ const Live = (() => {
     return day >= 1 && day <= 5 && m >= 540 && m <= 810;
   }
 
+  // 投信回報時間比整批最新的落後超過 STALE_MIN 分鐘 → 回 "HH:MM"（網頁標灰色時間）。
+  // 最新時間最多算到 13:30：收盤後有的投信就不更新了（元大停在 13:31，11/17 實測），那不算過期
+  const STALE_MIN = 5;
+  const mins = s => { const [h, m, x = 0] = String(s).split(":").map(Number); return h * 60 + m + x / 60; };
+  function staleTime(t, latest) {
+    if (!t || !latest || !/^\d{1,2}:\d{2}/.test(t) || !/^\d{1,2}:\d{2}/.test(latest)) return null;
+    const ref = Math.min(mins(latest), 13 * 60 + 30);
+    return ref - mins(t) > STALE_MIN ? t.slice(0, 5) : null;
+  }
+
   // 即時資料的日期要晚於收盤資料才覆蓋（晚上產生新資料後，不能被同一天的即時資料蓋掉）
   function isNewer(live, priceDate) {
     return !!(live && live.date && (!priceDate || live.date > priceDate));
@@ -31,8 +41,10 @@ const Live = (() => {
     return overview.etfs.map(e => {
       const q = live.etfs && live.etfs[e.code];
       if (!q) return e;
-      const [p, nav, prem] = q;
+      const [p, nav, prem, t] = q;
       const out = { ...e, live: true };
+      const stale = staleTime(t, live.time);
+      if (stale) out.stale = stale;
       if (isNum(p)) {
         out.price = p;
         out.livePx = true;   // chg_pct 是今天即時的（沒有即時價的 chg_pct 還是昨天的）
@@ -77,7 +89,7 @@ const Live = (() => {
     return out;
   }
 
-  return { isLiveWindow, isMarketOpen, isNewer, mergeOverview, mergeComponents, stockBatches };
+  return { isLiveWindow, isMarketOpen, isNewer, staleTime, mergeOverview, mergeComponents, stockBatches };
 })();
 
 if (typeof module !== "undefined") module.exports = Live;
