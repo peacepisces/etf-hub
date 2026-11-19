@@ -383,3 +383,5 @@ h2.sec { font-size: 15px; color: var(--muted); margin: 18px 0 0; }
 @media (max-width: 600px) { .ev-cal .ev-c { min-height: 46px; padding: 3px; } .ev-cal .ev-c .k { font-size: 9px; padding: 0 2px; } }
 .ev-month { align-items: center; margin-top: 4px; } .ev-month b { font-size: 15px; padding: 0 4px; }
 .chips button:disabled { opacity: .35; cursor: default; }
+/* 配息金額要清楚（使用者 2026-11-19：過去、未來都不明顯）：用前景色、等寬字 */
+.evlist .dt { color: var(--fg); font-family: var(--mono); font-size: 13px; font-weight: 500; }

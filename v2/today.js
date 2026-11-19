@@ -157,8 +157,8 @@ const Today = (() => {
     </div>`;
   }
 
-  // ---------- ETF 行事曆（#/events，使用者 2026-11-19）：月曆，可切上個月／下個月，今年 1 月起 ----------
-  // calendar.json：{today, from（今年 1/1）, events: [{date, kind, code, name, detail, freq?, new}]}
+  // ---------- ETF 行事曆（#/events，使用者 2026-11-19）：月曆，可切上個月／下個月，去年 1 月起 ----------
+  // calendar.json：{today, from（去年 1/1）, events: [{date, kind, code, name, detail, freq?, new}]}
   const WEEK = "日一二三四五六";
   const dayMs = d => Date.parse(`${d}T00:00:00Z`);
   const wd = d => new Date(dayMs(d)).getUTCDay();
