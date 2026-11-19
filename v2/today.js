@@ -1,4 +1,4 @@
-// 首頁「今日」（第 3 階段）：今日表現 vs 大盤（即時）、換股雷達、ETF 行事曆，往下資金流向、成交金額與爆量、漲跌幅、折溢價警示。
+// 首頁「今日」（第 3 階段）：今日表現 vs 大盤（即時）、換股雷達、即將發生（看全部是 ETF 行事曆），往下資金流向、成交金額與爆量、漲跌幅、折溢價警示。
 // 平均一律簡單平均、沒有漲跌的不算（spec「Claude 的判斷」）。我的關注存在瀏覽器（localStorage），換裝置要重設。
 "use strict";
 
@@ -101,65 +101,18 @@ const Today = (() => {
     return `持股日 ${shortDate(a)}${a !== b ? `～${shortDate(b)}` : ""}${st ? `・${st} 檔持股資料過期，未列入` : ""}`;
   }
 
-  // ---------- ETF 行事曆（使用者 2026-11-19：像日曆、也看得到昨天前天；除息標月配／季配）----------
-  // events.json：{today, from（上週一）, to（兩週後）, events: [{date, kind, code, name, detail, freq?, new, today, past}]}
+  // 除息標配息頻率（使用者 2026-11-19：加個框寫月配、季配，比較專業）
   const FREQ = { 12: "月配", 6: "雙月配", 4: "季配", 2: "半年配", 1: "年配" };
-  const WEEK = "日一二三四五六";
-  const isoDay = t => new Date(t).toISOString().slice(0, 10);
-  const dayMs = d => Date.parse(`${d}T00:00:00Z`);
-  const wd = d => new Date(dayMs(d)).getUTCDay();
+  const freqTag = e => e.kind === "除息" && FREQ[e.freq] ? `<span class="fq">${FREQ[e.freq]}</span>` : "";
 
-  function evFilter(ev, kind) {
-    const all = (ev && ev.events) || [];
-    return kind ? all.filter(e => e.kind === kind) : all;
-  }
-  // 預設選哪天：今天有事件選今天，不然選今天之後最近有事件的那天；之後都沒有就選最近過去的那天
-  function pickDay(ev, list, sel) {
-    const t = (ev && ev.today) || "";
-    if (sel) return sel;
-    const days = [...new Set(list.map(e => e.date))].sort();
-    return days.includes(t) ? t : days.find(d => d >= t) || days[days.length - 1] || t;
-  }
-  const dayLabel = (d, today) => `${d === today ? "今天・" : ""}${shortDate(d)}（${WEEK[wd(d)]}）`;
-
-  function calendar(ev, list, sel) {
-    const t = ev.today || "";
-    const days = [...new Set(list.map(e => e.date))].sort();
-    const from = ev.from || days[0] || t, to = ev.to || days[days.length - 1] || t;
-    if (!from || !to) return "";
-    const by = new Map();
-    for (const e of list) { if (!by.has(e.date)) by.set(e.date, []); by.get(e.date).push(e); }
-    const weekend = days.some(d => wd(d) === 0 || wd(d) === 6);   // 週末通常沒事件：有才多兩欄
-    const cols = weekend ? [1, 2, 3, 4, 5, 6, 0] : [1, 2, 3, 4, 5];
-    const cells = [];
-    for (let d = isoDay(dayMs(from) - ((wd(from) + 6) % 7) * 864e5); d <= to; d = isoDay(dayMs(d) + 864e5)) {   // 從 from 那週的週一排起
-      if (!cols.includes(wd(d))) continue;
-      if (d < from) { cells.push('<div class="cal-c empty"></div>'); continue; }
-      const items = by.get(d) || [];
-      const counts = [...new Set(items.map(e => e.kind))].map(k => `<span class="k k-${esc(k)}">${esc(k)} ${items.filter(e => e.kind === k).length}</span>`).join("");
-      const cls = ["cal-c", "ev-c", d < t ? "past" : "", d === t ? "today" : "", d === sel ? "sel" : "", items.length ? "" : "none"].filter(Boolean).join(" ");
-      cells.push(`<button type="button" class="${cls}" data-evday="${d}" aria-pressed="${d === sel}"${items.length ? "" : " disabled"}><span class="dn">${d === t ? "今天" : shortDate(d)}</span>${counts}</button>`);
-    }
-    return `<div class="cal ev-cal" style="grid-template-columns:repeat(${cols.length},1fr)">${cols.map(c => `<div class="cal-w">${WEEK[c]}</div>`).join("")}${cells.join("")}</div>`;
-  }
-
-  function evItem(e) {
-    const f = e.kind === "除息" && FREQ[e.freq] ? `<span class="fq">${FREQ[e.freq]}</span>` : "";
-    return `<li${e.past ? ' class="past"' : ""}><span class="k k-${esc(e.kind)}">${esc(e.kind)}</span>${f}
-      <a href="${href(e.code)}">${esc(e.name)}<span class="code">${esc(e.code)}</span></a><span class="dt">${esc(e.detail)}</span>${e.new ? "🆕" : ""}</li>`;
-  }
-
-  const EV_NOTE = "上週一～兩週後・點日期看當天・🆕＝我們兩天內第一次收到（可能比投信公告晚一天）・分割是恢復買賣日・新上市只有上市 ETF";
-
-  function eventsCard(ev, sel) {
-    const list = evFilter(ev, "");
-    if (!list.length) return card("ETF 行事曆", '<p class="empty">這段期間沒有事件</p>', "#/events", EV_NOTE);
-    const day = pickDay(ev, list, sel);
-    const items = list.filter(e => e.date === day), LIMIT = 8;
-    const more = items.length > LIMIT ? `<p class="note"><a href="#/events">還有 ${items.length - LIMIT} 件，看全部 →</a></p>` : "";
-    const body = `${calendar(ev, list, day)}<h3 class="ev-day">${dayLabel(day, ev.today)}<span class="badge">${items.length}</span></h3>
-      ${items.length ? `<ul class="evlist">${items.slice(0, LIMIT).map(evItem).join("")}</ul>${more}` : '<p class="empty">這天沒有事件</p>'}`;
-    return card("ETF 行事曆", body, "#/events", EV_NOTE);
+  function eventsCard(ev) {
+    const list = (ev && ev.events) || [];
+    const body = list.length ? `<ul class="evlist">${list.slice(0, 12).map(e => `<li${e.today ? ' class="today"' : ""}>
+        <span class="d">${e.today ? `今天${esc(e.kind)}` : shortDate(e.date)}</span><span class="k k-${esc(e.kind)}">${esc(e.kind)}</span>${freqTag(e)}
+        <a href="${href(e.code)}">${esc(e.name)}<span class="code">${esc(e.code)}</span></a><span class="dt">${esc(e.detail)}</span>${e.new ? "🆕" : ""}</li>`).join("")}</ul>`
+      : '<p class="empty">兩週內沒有事件</p>';
+    return card("即將發生（兩週內）", body, "#/events",
+      "依事件日排序・🆕＝我們兩天內第一次收到（可能比投信公告晚一天）・分割是恢復買賣日・新上市只有上市 ETF・看全部是行事曆");
   }
 
   function topList(rows, valueHtml) {
@@ -204,28 +157,81 @@ const Today = (() => {
     </div>`;
   }
 
-  // ETF 行事曆・完整（#/events）：日曆＋依日期分組的完整清單，可依種類篩選；點日曆捲到那天（app.js）
-  function eventsPage(ev, kind, sel) {
-    const all = evFilter(ev, "");
-    const list = evFilter(ev, kind);
+  // ---------- ETF 行事曆（#/events，使用者 2026-11-19）：月曆，可切上個月／下個月，今年 1 月起 ----------
+  // calendar.json：{today, from（今年 1/1）, events: [{date, kind, code, name, detail, freq?, new}]}
+  const WEEK = "日一二三四五六";
+  const dayMs = d => Date.parse(`${d}T00:00:00Z`);
+  const wd = d => new Date(dayMs(d)).getUTCDay();
+  const ymAdd = (ym, n) => { const [y, m] = ym.split("-").map(Number); const t = new Date(Date.UTC(y, m - 1 + n, 1)); return t.toISOString().slice(0, 7); };
+
+  // 可以看的月份：from 那個月 ～ 最後一筆事件（或今天）那個月
+  function monthRange(cal) {
+    const all = (cal && cal.events) || [];
+    const t = (cal && cal.today) || "";
+    const first = ((cal && cal.from) || t).slice(0, 7);
+    const last = [t, ...all.map(e => e.date)].sort().pop().slice(0, 7);
+    return [first, last];
+  }
+
+  function monthGrid(ym, list, today, sel) {
+    const [y, m] = ym.split("-").map(Number);
+    const n = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    const days = Array.from({ length: n }, (_, i) => `${ym}-${String(i + 1).padStart(2, "0")}`);
+    const by = new Map();
+    for (const e of list) { if (!by.has(e.date)) by.set(e.date, []); by.get(e.date).push(e); }
+    const weekend = days.some(d => (wd(d) === 0 || wd(d) === 6) && by.has(d));   // 週末通常沒事件：有才多兩欄
+    const cols = weekend ? [1, 2, 3, 4, 5, 6, 0] : [1, 2, 3, 4, 5];
+    const shown = days.filter(d => cols.includes(wd(d)));
+    const lead = cols.indexOf(wd(shown[0]));
+    const cells = Array.from({ length: lead }, () => '<div class="cal-c empty"></div>');
+    for (const d of shown) {
+      const items = by.get(d) || [];
+      const counts = [...new Set(items.map(e => e.kind))].map(k => `<span class="k k-${esc(k)}">${esc(k)} ${items.filter(e => e.kind === k).length}</span>`).join("");
+      const cls = ["cal-c", "ev-c", d < today ? "past" : "", d === today ? "today" : "", d === sel ? "sel" : "", items.length ? "" : "none"].filter(Boolean).join(" ");
+      cells.push(`<button type="button" class="${cls}" data-evday="${d}" aria-pressed="${d === sel}"${items.length ? "" : " disabled"}><span class="dn">${d === today ? "今天" : Number(d.slice(8))}</span>${counts}</button>`);
+    }
+    return `<div class="cal ev-cal" style="grid-template-columns:repeat(${cols.length},1fr)">${cols.map(c => `<div class="cal-w">${WEEK[c]}</div>`).join("")}${cells.join("")}</div>`;
+  }
+
+  function evItem(e, today) {
+    return `<li${e.date < today ? ' class="past"' : ""}><span class="k k-${esc(e.kind)}">${esc(e.kind)}</span>${freqTag(e)}
+      <a href="${href(e.code)}">${esc(e.name)}<span class="code">${esc(e.code)}</span></a><span class="dt">${esc(e.detail)}</span>${e.new ? "🆕" : ""}</li>`;
+  }
+
+  // ym：要看的月份（null＝這個月）；sel：點了哪天（null＝這個月今天以後第一個有事件的日子）
+  function eventsPage(cal, kind, sel, ym) {
+    const all = (cal && cal.events) || [];
+    const today = (cal && cal.today) || "";
+    const [first, last] = monthRange(cal);
+    ym = ym || today.slice(0, 7) || first;
+    if (ym < first) ym = first;
+    if (ym > last) ym = last;
+    const inMonth = all.filter(e => e.date.startsWith(ym));
+    const list = kind ? inMonth.filter(e => e.kind === kind) : inMonth;
     const kinds = [...new Set(all.map(e => e.kind))];
     const chips = [["", "全部"], ...kinds.map(k => [k, k])].map(([k, l]) =>
-      `<button type="button" data-evkind="${esc(k)}" aria-pressed="${(kind || "") === k}">${esc(l)}${k ? ` ${all.filter(e => e.kind === k).length}` : ` ${all.length}`}</button>`).join("");
-    const day = list.length ? pickDay(ev || {}, list, sel) : null;
+      `<button type="button" data-evkind="${esc(k)}" aria-pressed="${(kind || "") === k}">${esc(l)} ${k ? inMonth.filter(e => e.kind === k).length : inMonth.length}</button>`).join("");
     const days = [...new Set(list.map(e => e.date))].sort();
+    const day = sel && sel.startsWith(ym) ? sel : days.find(d => d >= today) || days[days.length - 1] || null;
+    const [y, m] = ym.split("-").map(Number);
+    const nav = `<div class="chips ev-month"><button type="button" data-evym="${ymAdd(ym, -1)}"${ym <= first ? " disabled" : ""}>← 上個月</button>
+      <b>${y} 年 ${m} 月</b><button type="button" data-evym="${ymAdd(ym, 1)}"${ym >= last ? " disabled" : ""}>下個月 →</button>
+      ${ym !== today.slice(0, 7) ? `<button type="button" data-evym="${today.slice(0, 7)}">回到這個月</button>` : ""}</div>`;
     const body = days.map(d => {
       const items = list.filter(e => e.date === d);
-      const today = items.some(e => e.today), past = items.every(e => e.past);
-      return `<section class="card ev-sec${past ? " past" : ""}${d === day ? " sel" : ""}" id="evd-${d}"><h2>${today ? "今天" : shortDate(d)}${past ? '<span class="sub">已過</span>' : ""}<span class="badge">${items.length}</span></h2>
-        <ul class="evlist">${items.map(evItem).join("")}</ul></section>`;
-    }).join("") || '<p class="empty">沒有事件</p>';
+      return `<section class="card ev-sec${d < today ? " past" : ""}${d === day ? " sel" : ""}" id="evd-${d}"><h2>${d === today ? "今天" : shortDate(d)}（${WEEK[wd(d)]}）${d < today ? '<span class="sub">已過</span>' : ""}<span class="badge">${items.length}</span></h2>
+        <ul class="evlist">${items.map(e => evItem(e, today)).join("")}</ul></section>`;
+    }).join("") || '<p class="empty">這個月沒有事件</p>';
+    // 新上市、分割從哪天開始有紀錄（之前沒存）：照實寫
+    const other = all.filter(e => e.kind !== "除息").map(e => e.date).sort()[0];
+    const note = `除息自 ${esc(first.replace("-", "/"))} 起${other ? `・新上市、分割自 ${esc(other.replace(/-/g, "/"))} 起才有紀錄` : ""}・點日期跳到那天・🆕＝我們兩天內第一次收到・分割是恢復買賣日・新上市只有上市 ETF`;
     return `<div class="nav-row"><a href="#/today">← 今日焦點</a></div>
-      <section class="card"><h2>ETF 行事曆</h2><div class="chips">${chips}</div>${ev ? calendar(ev, list, day) : ""}
-      <p class="note">${EV_NOTE}</p></section>${body}`;
+      <section class="card"><div class="tc-head"><h2>ETF 行事曆</h2></div>${nav}<div class="chips" style="margin-top:8px">${chips}</div>
+      ${monthGrid(ym, list, today, day)}<p class="note">${note}</p></section>${body}`;
   }
 
   function page(o, data, opts) {
-    return `${perfRow(o, opts.watch)}<div class="tgrid two">${radarCard(data.radar, opts.passive)}${eventsCard(data.events, opts.evday)}</div>${lowerCards(o, data.flows)}`;
+    return `${perfRow(o, opts.watch)}<div class="tgrid two">${radarCard(data.radar, opts.passive)}${eventsCard(data.events)}</div>${lowerCards(o, data.flows)}`;
   }
 
   return { groups, beat, loadWatch, saveWatch, radarRows, radarDates, page, eventsPage, lowerCards, WATCH_KEY };

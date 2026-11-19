@@ -4,7 +4,7 @@
 const app = document.getElementById("app");
 const state = { base: null, index: null, candles: {}, details: {}, live: null, stocks: {},
                 sort: { rank: { key: "r_ytd", dir: -1 }, quote: { key: "code", dir: 1 }, flow: { key: "f_d1", dir: -1 }, tools: { key: "ret", dir: -1 }, stock: { key: "w", dir: -1 }, tag: { key: "ret.ytd", dir: -1 }, hold: { key: "w", dir: -1 }, div: { key: "yield", dir: -1 }, act: { key: "v", dir: -1 }, radar: { key: "buy", dir: -1 }, multi: { key: "total", dir: -1 } },
-                range: "m3", chartMode: "kline", site: {}, passive: false, div: { f: { kind: "all", freq: "" }, ym: null }, act: { period: "y1", sel: [], issuer: null }, track: { tab: "radar", q: "", mode: "all", osel: [] }, rk: { period: "ytd", chips: [], tab: "quote", q: "", issuer: "", board: {} }, ev: { kind: "", day: null }, tools: { crit: {}, cmp: [] }, tab: "holdings", hview: "stocks", filter: null, chart: null, cols: {}, etfNav: null };
+                range: "m3", chartMode: "kline", site: {}, passive: false, div: { f: { kind: "all", freq: "" }, ym: null }, act: { period: "y1", sel: [], issuer: null }, track: { tab: "radar", q: "", mode: "all", osel: [] }, rk: { period: "ytd", chips: [], tab: "quote", q: "", issuer: "", board: {} }, ev: { kind: "", day: null, ym: null }, tools: { crit: {}, cmp: [] }, tab: "holdings", hview: "stocks", filter: null, chart: null, cols: {}, etfNav: null };
 // 即時：和舊版同一個轉接站、同樣頻率（web/app.js）；本機開發用本機轉接站
 const LIVE_URL = ["localhost", "127.0.0.1"].includes(location.hostname) ? "http://127.0.0.1:8787" : "https://etf-live.peacepisceslamb.workers.dev";
 const LIVE_EVERY_MS = 20000;
@@ -151,10 +151,10 @@ async function render() {
       };
     }
     else if (route === "stock") html = Pages.stock(o, await loadIndex(), args[0] || "", state.sort.stock);
-    else if (route === "events") html = Today.eventsPage(await loadSite("events.json"), state.ev.kind, state.ev.day);
+    else if (route === "events") html = Today.eventsPage(await loadSite("calendar.json"), state.ev.kind, state.ev.day, state.ev.ym);
     else {
       const [radar, events, flows] = await Promise.all(["radar.json", "events.json", "flows.json"].map(n => loadSite(n)));
-      html = Today.page(o, { radar, events, flows }, { watch: Today.loadWatch(storage()), passive: state.passive, evday: state.ev.day });
+      html = Today.page(o, { radar, events, flows }, { watch: Today.loadWatch(storage()), passive: state.passive });
     }
     if (seq !== renderSeq) return;
     if (state.chart) { state.chart.destroy(); state.chart = null; }
@@ -216,12 +216,13 @@ app.addEventListener("click", ev => {
   }
   const evk = ev.target.closest("button[data-evkind]");
   if (evk) { state.ev.kind = evk.dataset.evkind; state.ev.day = null; render(); return; }
-  // 行事曆：點日期 → 首頁卡片換成那天的清單；完整頁捲到那天
+  // 行事曆：切月份；點日期 → 捲到那天
+  const evm = ev.target.closest("button[data-evym]");
+  if (evm) { state.ev.ym = evm.dataset.evym; state.ev.day = null; render(); return; }
   const evd = ev.target.closest("button[data-evday]");
   if (evd) {
     state.ev.day = evd.dataset.evday;
-    const onPage = Router.parse(location.hash).route === "events";
-    render().then(() => { if (onPage) { const s = document.getElementById(`evd-${state.ev.day}`); if (s) s.scrollIntoView({ behavior: "smooth", block: "start" }); } });
+    render().then(() => { const s = document.getElementById(`evd-${state.ev.day}`); if (s) s.scrollIntoView({ behavior: "smooth", block: "start" }); });
     return;
   }
   // 總覽：切換子項目；排行榜「看報酬比較」帶期間、篩選跳過去
