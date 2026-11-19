@@ -46,6 +46,8 @@ const Ovw = (() => {
   }
   // 成交金額是每晚更新的（前一個交易日），盤中價格是即時的：欄名標日期，免得以為是今天（使用者 2026-11-12）
   const quoteCols = day => QUOTE_COLS.map(c => c.key === "value" ? { ...c, label: `成交金額（${day}）` } : c);
+  // 投信沒回報淨值（2026-11-17 兆豐）：顯示最後一次的淨值，旁邊標日期（使用者 2026-11-19：要標淨值過期）
+  const navStale = r => r.nav_stale ? ` <span class="stale" title="投信 ${esc(C.shortDate(r.nav_stale))} 之後沒有回報淨值，這是當天的淨值">${esc(C.shortDate(r.nav_stale))}</span>` : "";
   // 投信回報很久沒更新（盤中落後 5 分鐘以上，見 Live.staleTime）：價格旁標灰色時間，免得以為是現在的價格（使用者 2026-11-17）
   const PRICE_COL = { key: "price", label: "價格", r: 1, get: r => r.price,
     html: r => num(r.price) + (r.stale ? ` <span class="stale" title="這檔投信 ${esc(r.stale)} 之後沒再回報，價格可能不是現在的">${esc(r.stale)}</span>` : "") };
@@ -55,7 +57,7 @@ const Ovw = (() => {
     { key: "issuer", label: "投信", text: 1, get: r => r.issuer, html: r => esc(r.issuer || "—") },
     PRICE_COL,
     { key: "chg_pct", label: "漲跌", r: 1, get: r => r.chg_pct, html: r => pct(r.chg_pct) },
-    { key: "nav", label: "淨值", r: 1, get: r => r.nav, html: r => num(r.nav) },
+    { key: "nav", label: "淨值", r: 1, get: r => r.nav, html: r => num(r.nav) + navStale(r) },
     { key: "premium", label: "折溢價", r: 1, get: r => r.premium, html: r => pct(r.premium) },
     { key: "value", label: "成交金額", r: 1, get: r => r.value, html: r => money(r.value) },
     { key: "aum", label: "規模", r: 1, get: r => r.aum, html: r => aum(r.aum) }];
