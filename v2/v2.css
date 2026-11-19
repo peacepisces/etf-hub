@@ -355,3 +355,16 @@ h2.sec { font-size: 15px; color: var(--muted); margin: 18px 0 0; }
 .toplist li b .sub.br { display: block; text-align: right; margin: 0; font-weight: 400; }
 .stale { color: var(--muted); font-size: 11px; font-weight: normal; }
 .visits { margin-top: 6px; color: var(--muted); font-size: 12px; text-align: center; }
+/* ETF 行事曆（使用者 2026-11-19） */
+.ev-cal .ev-c { font: inherit; font-size: 11px; color: var(--fg); border: 1px solid transparent; text-align: left; cursor: pointer; min-height: 58px; gap: 3px; }
+.ev-cal .ev-c.none { cursor: default; opacity: .55; }
+.ev-cal .ev-c.past { opacity: .6; } .ev-cal .ev-c.past.none { opacity: .35; }
+.ev-cal .ev-c.sel { border-color: var(--accent); background: var(--panel); opacity: 1; }
+.ev-cal .ev-c .k, .evlist .fq { font-size: 10px; border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; color: var(--muted); white-space: nowrap; width: fit-content; }
+.ev-cal .ev-c .k-除息, .evlist .k-除息 { color: var(--accent); border-color: var(--accent); }
+.evlist .fq { flex: none; font-size: 11px; color: var(--fg); }
+.evlist li.past { opacity: .6; }
+.ev-day { font-size: 14px; margin: 12px 0 0; display: flex; gap: 8px; align-items: center; }
+.ev-sec.past { opacity: .75; } .ev-sec.sel { outline: 1.5px solid var(--accent); }
+.ev-sec h2 .sub { font-size: 12px; color: var(--muted); font-weight: normal; margin-left: 6px; }
+@media (max-width: 600px) { .ev-cal .ev-c { min-height: 46px; padding: 3px; } .ev-cal .ev-c .k { font-size: 9px; padding: 0 2px; } }
