@@ -385,3 +385,4 @@ h2.sec { font-size: 15px; color: var(--muted); margin: 18px 0 0; }
 .chips button:disabled { opacity: .35; cursor: default; }
 /* 配息金額要清楚（使用者 2026-11-19：過去、未來都不明顯）：用前景色、等寬字 */
 .evlist .dt { color: var(--fg); font-family: var(--mono); font-size: 13px; font-weight: 500; }
+.newtag { margin-left: 6px; font-size: 11px; font-weight: 600; color: var(--accent); border: 1px solid var(--accent); background: var(--accent-bg); border-radius: 999px; padding: 0 6px; vertical-align: 1px; white-space: nowrap; }

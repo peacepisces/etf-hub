@@ -103,16 +103,18 @@ const Today = (() => {
 
   // 除息標配息頻率（使用者 2026-11-19：加個框寫月配、季配，比較專業；每種不同顏色，一眼分得出來）
   const FREQ = { 12: "月配", 6: "雙月配", 4: "季配", 2: "半年配", 1: "年配" };
+  // 新公告（使用者 2026-11-19：🆕 太小、跟金額黏在一起看不出來 → 改文字小標，放名稱後面）
+  const newTag = e => e.new ? '<span class="newtag" title="我們兩天內第一次收到這筆公告">新公告</span>' : "";
   const freqTag = e => e.kind === "除息" && FREQ[e.freq] ? `<span class="fq fq-${e.freq}">${FREQ[e.freq]}</span>` : "";
 
   function eventsCard(ev) {
     const list = (ev && ev.events) || [];
     const body = list.length ? `<ul class="evlist">${list.slice(0, 12).map(e => `<li${e.today ? ' class="today"' : ""}>
         <span class="d">${e.today ? `今天${esc(e.kind)}` : shortDate(e.date)}</span><span class="k k-${esc(e.kind)}">${esc(e.kind)}</span>${freqTag(e)}
-        <a href="${href(e.code)}">${esc(e.name)}<span class="code">${esc(e.code)}</span></a><span class="dt">${esc(e.detail)}</span>${e.new ? "🆕" : ""}</li>`).join("")}</ul>`
+        <a href="${href(e.code)}">${esc(e.name)}<span class="code">${esc(e.code)}</span>${newTag(e)}</a><span class="dt">${esc(e.detail)}</span></li>`).join("")}</ul>`
       : '<p class="empty">兩週內沒有事件</p>';
     return card("即將發生（兩週內）", body, "#/events",
-      "依事件日排序・🆕＝我們兩天內第一次收到（可能比投信公告晚一天）・分割是恢復買賣日・新上市只有上市 ETF・看全部是行事曆");
+      "依事件日排序・新公告＝我們兩天內第一次收到（可能比投信公告晚一天）・分割是恢復買賣日・新上市只有上市 ETF・看全部是行事曆");
   }
 
   function topList(rows, valueHtml) {
@@ -195,7 +197,7 @@ const Today = (() => {
 
   function evItem(e, today) {
     return `<li${e.date < today ? ' class="past"' : ""}><span class="k k-${esc(e.kind)}">${esc(e.kind)}</span>${freqTag(e)}
-      <a href="${href(e.code)}">${esc(e.name)}<span class="code">${esc(e.code)}</span></a><span class="dt">${esc(e.detail)}</span>${e.new ? "🆕" : ""}</li>`;
+      <a href="${href(e.code)}">${esc(e.name)}<span class="code">${esc(e.code)}</span>${newTag(e)}</a><span class="dt">${esc(e.detail)}</span></li>`;
   }
 
   // ym：要看的月份（null＝這個月）；sel：點了哪天（null＝這個月今天以後第一個有事件的日子）
@@ -224,7 +226,7 @@ const Today = (() => {
     }).join("") || '<p class="empty">這個月沒有事件</p>';
     // 新上市、分割從哪天開始有紀錄（之前沒存）：照實寫
     const other = all.filter(e => e.kind !== "除息").map(e => e.date).sort()[0];
-    const note = `除息自 ${esc(first.replace("-", "/"))} 起${other ? `・新上市、分割自 ${esc(other.replace(/-/g, "/"))} 起才有紀錄` : ""}・點日期跳到那天・🆕＝我們兩天內第一次收到・分割是恢復買賣日・新上市只有上市 ETF`;
+    const note = `除息自 ${esc(first.replace("-", "/"))} 起${other ? `・新上市、分割自 ${esc(other.replace(/-/g, "/"))} 起才有紀錄` : ""}・點日期跳到那天・新公告＝我們兩天內第一次收到・分割是恢復買賣日・新上市只有上市 ETF`;
     return `<div class="nav-row"><a href="#/today">← 今日焦點</a></div>
       <section class="card"><div class="tc-head"><h2>ETF 行事曆</h2></div>${nav}<div class="chips" style="margin-top:8px">${chips}</div>
       ${monthGrid(ym, list, today, day)}<p class="note">${note}</p></section>${body}`;
