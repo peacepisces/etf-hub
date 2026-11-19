@@ -101,9 +101,9 @@ const Today = (() => {
     return `持股日 ${shortDate(a)}${a !== b ? `～${shortDate(b)}` : ""}${st ? `・${st} 檔持股資料過期，未列入` : ""}`;
   }
 
-  // 除息標配息頻率（使用者 2026-11-19：加個框寫月配、季配，比較專業）
+  // 除息標配息頻率（使用者 2026-11-19：加個框寫月配、季配，比較專業；每種不同顏色，一眼分得出來）
   const FREQ = { 12: "月配", 6: "雙月配", 4: "季配", 2: "半年配", 1: "年配" };
-  const freqTag = e => e.kind === "除息" && FREQ[e.freq] ? `<span class="fq">${FREQ[e.freq]}</span>` : "";
+  const freqTag = e => e.kind === "除息" && FREQ[e.freq] ? `<span class="fq fq-${e.freq}">${FREQ[e.freq]}</span>` : "";
 
   function eventsCard(ev) {
     const list = (ev && ev.events) || [];

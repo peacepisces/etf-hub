@@ -3,6 +3,7 @@
   --bg: #0d1117; --panel: #151a22; --panel-2: #1b212b; --line: #262e3a;
   --fg: #e7eaf0; --muted: #8a94a6; --accent: #f0b54a; --accent-bg: rgba(240,181,74,.18);
   --up: #ff5d62; --down: #33c27f; --up-bg: rgba(255,93,98,.12); --down-bg: rgba(51,194,127,.12);
+  --f12: #5aa9ff; --f6: #3cc9c9; --f4: #b48cff; --f2: #ff8fc8; --f1: #a9b4c2;   /* 配息頻率框：月配藍、雙月配青、季配紫、半年配粉、年配灰（避開漲跌的紅綠、除息的金色） */
   --zebra: rgba(255,255,255,.025); --hover: #1f2633;
   /* 各欄前 3 名的顏色（色盲分不開的組合靠文字標籤補）：今年以來、近 1 年、殖利率、規模 */
   --t-ytd: #c98500; --t-y1: #3987e5; --t-yld: #d55181; --t-aum: #199e70;
@@ -19,6 +20,7 @@
   --bg: #f5f6f8; --panel: #ffffff; --panel-2: #f0f2f5; --line: #e1e4ea;
   --fg: #141920; --muted: #5c6677; --accent: #a8690f; --accent-bg: rgba(168,105,15,.14);
   --up: #d42a37; --down: #0f8a57; --up-bg: rgba(212,42,55,.08); --down-bg: rgba(15,138,87,.08);
+  --f12: #1d6fd6; --f6: #0d8a8c; --f4: #7346d4; --f2: #c2337a; --f1: #5c6677;
   --zebra: rgba(0,0,0,.025); --hover: #eef1f6;
   --t-ytd: #b07400; --t-y1: #2a78d6; --t-yld: #d6457f; --t-aum: #118c60;
   --d1: #2a78d6; --d2: #d6457f; --d3: #b07400; --d4: #118c60; --d-other: #c3c8d1;
@@ -27,6 +29,7 @@
   --bg: #f5f6f8; --panel: #ffffff; --panel-2: #f0f2f5; --line: #e1e4ea;
   --fg: #141920; --muted: #5c6677; --accent: #a8690f; --accent-bg: rgba(168,105,15,.14);
   --up: #d42a37; --down: #0f8a57; --up-bg: rgba(212,42,55,.08); --down-bg: rgba(15,138,87,.08);
+  --f12: #1d6fd6; --f6: #0d8a8c; --f4: #7346d4; --f2: #c2337a; --f1: #5c6677;
   --zebra: rgba(0,0,0,.025); --hover: #eef1f6;
   --t-ytd: #b07400; --t-y1: #2a78d6; --t-yld: #d6457f; --t-aum: #118c60;
   --d1: #2a78d6; --d2: #d6457f; --d3: #b07400; --d4: #118c60; --d-other: #c3c8d1;
@@ -36,6 +39,7 @@
   --bg: #f3ead7; --panel: #fbf6eb; --panel-2: #efe4cd; --line: #ddcfb2;
   --fg: #33291d; --muted: #6e5f4b; --accent: #8f520c; --accent-bg: rgba(143,82,12,.14);
   --up: #b8282f; --down: #1d7346; --up-bg: rgba(184,40,47,.09); --down-bg: rgba(29,115,70,.09);
+  --f12: #1d6fd6; --f6: #0d8a8c; --f4: #7346d4; --f2: #c2337a; --f1: #5c6677;
   --zebra: rgba(80,50,0,.035); --hover: #f0e6d2;
   --t-ytd: #a86c00; --t-y1: #2a6fc4; --t-yld: #c43f74; --t-aum: #107f57;
   --d1: #2a6fc4; --d2: #c43f74; --d3: #a86c00; --d4: #107f57; --d-other: #cbbd9f;
@@ -362,7 +366,8 @@ h2.sec { font-size: 15px; color: var(--muted); margin: 18px 0 0; }
 .ev-cal .ev-c.sel { border-color: var(--accent); background: var(--panel); opacity: 1; }
 .ev-cal .ev-c .k, .evlist .fq { font-size: 10px; border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; color: var(--muted); white-space: nowrap; width: fit-content; }
 .ev-cal .ev-c .k-除息, .evlist .k-除息 { color: var(--accent); border-color: var(--accent); }
-.evlist .fq { flex: none; font-size: 11px; color: var(--fg); }
+.evlist .fq { flex: none; font-size: 11px; min-width: 3.6em; text-align: center; color: var(--fq, var(--fg)); border-color: currentColor; background: color-mix(in srgb, currentColor 14%, transparent); font-weight: 500; }
+.fq-12 { --fq: var(--f12); } .fq-6 { --fq: var(--f6); } .fq-4 { --fq: var(--f4); } .fq-2 { --fq: var(--f2); } .fq-1 { --fq: var(--f1); }
 .evlist li.past { opacity: .6; }
 .ev-sec.past { opacity: .75; } .ev-sec.sel { outline: 1.5px solid var(--accent); }
 .ev-sec h2 .sub { font-size: 12px; color: var(--muted); font-weight: normal; margin-left: 6px; }
