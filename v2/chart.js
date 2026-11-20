@@ -58,9 +58,10 @@ const Chart = (() => {
     if (!LC) { el.innerHTML = '<p class="empty">圖表元件載入失敗，請重新整理</p>'; return null; }
     const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
     const [muted, line, panel] = ["--muted", "--line", "--panel"].map(css);
+    // attributionLogo: false：圖上不放 TradingView 標誌（使用者 2026-11-20）；授權要求的註明放在頁尾
     const chart = LC.createChart(el, {
       autoSize: true,
-      layout: { background: { color: panel }, textColor: muted, fontFamily: getComputedStyle(document.body).fontFamily },
+      layout: { background: { color: panel }, textColor: muted, fontFamily: getComputedStyle(document.body).fontFamily, attributionLogo: false },
       grid: { vertLines: { visible: false }, horzLines: { color: line } },
       rightPriceScale: { borderColor: line }, timeScale: { borderColor: line },
       crosshair: { mode: LC.CrosshairMode.Normal },
@@ -145,7 +146,7 @@ const Chart = (() => {
     const [up, down, fg, muted, line, panel] = ["--up", "--down", "--fg", "--muted", "--line", "--panel"].map(css);
     const chart = LC.createChart(el, {
       autoSize: true,
-      layout: { background: { color: panel }, textColor: muted, fontFamily: getComputedStyle(document.body).fontFamily },
+      layout: { background: { color: panel }, textColor: muted, fontFamily: getComputedStyle(document.body).fontFamily, attributionLogo: false },
       grid: { vertLines: { visible: false }, horzLines: { color: line } },
       rightPriceScale: { borderColor: line },
       timeScale: { borderColor: line },
