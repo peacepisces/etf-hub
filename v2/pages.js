@@ -70,7 +70,7 @@ const Pages = (() => {
     const tab = v.tab || "holdings";
     const body = tab === "holdings" ? Detail.holdings(v.d, v.hview, v.hsort, v.d0050)
       : tab === "premium" ? Detail.premium(v.d) : tab === "dividend" ? Detail.dividend(v.d)
-        : tab === "info" ? Detail.info(e, v.d) : Detail.ops(v.d, v.filter);
+        : tab === "info" ? Detail.info(e, v.d) : tab === "people" ? Detail.people(e, v.d) : Detail.ops(v.d, v.filter);
     return `${Detail.head(e, v.d, o.etfs)}<section class="card chart-box">${chart}</section>
       ${Detail.tabs(tab)}<div class="tab-body">${body}</div>`;
   }

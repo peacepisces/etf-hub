@@ -20,6 +20,9 @@ const Core = (() => {
   // 規模（億）：一萬億以上寫兆
   function aum(v) { return isNum(v) ? (v >= 10000 ? `${num(v / 10000, 2)} 兆` : `${num(v, 0)} 億`) : dash; }
   const shortDate = d => d ? d.slice(5).replace("-", "/") : "—";
+  // 受益人數（使用者 2026-11-24）：一萬以上寫「403.8 萬」；增減帶正負號、增加紅（漲）減少綠（跌）
+  function people(v) { return isNum(v) ? (Math.abs(v) >= 10000 ? `${num(v / 10000, 1)} 萬` : num(v, 0)) : dash; }
+  function peopleChg(v) { return isNum(v) ? `<span class="${signCls(v)}">${v > 0 ? "+" : v < 0 ? "−" : ""}${people(Math.abs(v))}</span>` : dash; }
   async function loadJson(path) {
     const r = await fetch(DATA + path, { cache: "no-cache" });
     if (!r.ok) throw Object.assign(new Error(`${path} ${r.status}`), { status: r.status });
@@ -27,7 +30,7 @@ const Core = (() => {
   }
   // 檔案真的不存在（404）才當成沒有資料；網路斷線等錯誤要讓使用者知道是讀取失敗
   const isNotFound = err => !!err && err.status === 404;
-  return { addLive, liveRet, DATA, esc, isNum, dash, num, signCls, pct, aum, shortDate, loadJson, isNotFound };
+  return { addLive, liveRet, DATA, esc, isNum, dash, num, signCls, pct, aum, people, peopleChg, shortDate, loadJson, isNotFound };
 })();
 
 if (typeof module !== "undefined") module.exports = Core;

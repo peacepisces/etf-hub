@@ -45,7 +45,8 @@ const Ovw = (() => {
       .map(e => ({ ...e, value: vol[e.code] ? vol[e.code].value : null }));
   }
   // 成交金額是每晚更新的（前一個交易日），盤中價格是即時的：欄名標日期，免得以為是今天（使用者 2026-11-12）
-  const quoteCols = day => QUOTE_COLS.map(c => c.key === "value" ? { ...c, label: `成交金額（${day}）` } : c);
+  const quoteCols = (day, hday) => QUOTE_COLS.map(c => c.key === "value" ? { ...c, label: `成交金額（${day}）` }
+    : c.key === "holders" && hday ? { ...c, label: `受益人數（${hday}）` } : c);
   // 投信沒回報淨值（2026-11-17 兆豐）：顯示最後一次的淨值，旁邊標日期（使用者 2026-11-19：要標淨值過期）
   const navStale = r => r.nav_stale ? ` <span class="stale" title="投信 ${esc(C.shortDate(r.nav_stale))} 之後沒有回報淨值，這是當天的淨值">${esc(C.shortDate(r.nav_stale))}</span>` : "";
   // 投信回報很久沒更新（盤中落後 5 分鐘以上，見 Live.staleTime）：價格旁標灰色時間，免得以為是現在的價格（使用者 2026-11-17）
@@ -60,6 +61,9 @@ const Ovw = (() => {
     { key: "nav", label: "淨值", r: 1, get: r => r.nav, html: r => num(r.nav) + navStale(r) },
     { key: "premium", label: "折溢價", r: 1, get: r => r.premium, html: r => pct(r.premium) },
     { key: "value", label: "成交金額", r: 1, get: r => r.value, html: r => money(r.value) },
+    // 受益人數（集保，每週；使用者 2026-11-24：看大多數人買什麼）。欄名標資料日，免得以為是今天
+    { key: "holders", label: "受益人數", r: 1, get: r => r.holders, html: r => C.people(r.holders) },
+    { key: "holders_chg", label: "週增減", r: 1, get: r => r.holders_chg, html: r => C.peopleChg(r.holders_chg) },
     { key: "aum", label: "規模", r: 1, get: r => r.aum, html: r => aum(r.aum) }];
 
   function quote(o, f, st, live) {
@@ -67,7 +71,8 @@ const Ovw = (() => {
     const issuers = [...new Set(o.etfs.map(e => e.issuer).filter(Boolean))].sort((a, b) => a.localeCompare(b, "zh-Hant"));
     const chips = R.CHIP_GROUPS.map(g => g.map(([l]) => `<button type="button" data-rchip="${esc(l)}" aria-pressed="${(st.chips || []).includes(l)}">${esc(l)}</button>`).join("")).join('<span class="sep"></span>');
     const vday = f && f.end ? C.shortDate(f.end) : C.shortDate(o.price_date);
-    const t = TB.render("quote", quoteCols(vday), list, st.sort, { rowLink: r => href(r.code) });
+    const hday = (o.etfs.find(e => e.holders_date) || {}).holders_date;
+    const t = TB.render("quote", quoteCols(vday, hday && C.shortDate(hday)), list, st.sort, { rowLink: r => href(r.code) });
     const asof = live ? `盤中即時（證交所 ${esc(live)}），淨值是預估` : `${C.shortDate(o.price_date)} 收盤・淨值是投信預估（正式淨值隔天更新）`;
     return `<section class="card"><div class="ov-tools">
         <input type="search" data-oq value="${esc(st.q || "")}" placeholder="篩選：代號或名稱" aria-label="篩選代號或名稱" autocomplete="off">

@@ -135,6 +135,23 @@ const Today = (() => {
       + card("三大法人・賣超前 5", topList(sell, r => `${money(r.v[3])}${parts(r)}`), OV().link("flow", { sort: "i_tot", dir: 1 }));
   }
 
+  // 人氣（受益人數，集保每週；使用者 2026-11-24：看大多數人在買什麼）：本週增加最多前 5。
+  // 第一週還沒有「上週」可比 → 先列人數最多，註明週增減下週開始有
+  function holdersCard(o) {
+    const rows = o.etfs.filter(e => isNum(e.holders));
+    if (!rows.length) return "";
+    const day = shortDate(rows[0].holders_date);
+    const withChg = rows.filter(e => isNum(e.holders_chg));
+    if (withChg.length) {
+      const top = withChg.slice().sort((a, b) => b.holders_chg - a.holders_chg).slice(0, 5).map(e => ({ e }));
+      return card("人氣・受益人數週增加", topList(top, r => `${C.peopleChg(r.e.holders_chg)}<span class="sub">共 ${C.people(r.e.holders)}</span>`),
+        OV().link("quote", { sort: "holders_chg" }), `集保每週資料・${day}・和上一週比`);
+    }
+    const top = rows.slice().sort((a, b) => b.holders - a.holders).slice(0, 5).map(e => ({ e }));
+    return card("人氣・受益人數最多", topList(top, r => `${C.people(r.e.holders)} 人`), OV().link("quote", { sort: "holders" }),
+      `集保每週資料・${day}・「本週增加最多」下週開始有`);
+  }
+
   // opts.noInst：舊參數（以前三大法人是空卡），現在不用
   function lowerCards(o, f, opts = {}) {
     const byCode = new Map(o.etfs.map(e => [e.code, e]));
@@ -149,6 +166,7 @@ const Today = (() => {
     const down = movers.slice().sort((a, b) => a.chg_pct - b.chg_pct).slice(0, 5).map(e => ({ e }));
     const prem = o.etfs.filter(e => isNum(e.premium) && Math.abs(e.premium) >= 2).sort((a, b) => Math.abs(b.premium) - Math.abs(a.premium)).slice(0, 8).map(e => ({ e }));
     return `<div class="tgrid">
+      ${holdersCard(o)}
       ${card("資金流向・最吸金", topList(inflow, r => money(r.v)), OV().link("flow", { sort: "f_d1" }), `受益權單位數變化 × 淨值・${f ? shortDate(f.end) : ""}・資料自 ${since ? shortDate(since) : "—"} 起`)}
       ${card("資金流向・最失血", topList(outflow, r => money(r.v)), OV().link("flow", { sort: "f_d1", dir: 1 }))}
       ${card("成交金額爆量", topList(vol, r => `${num(r.v.ratio, 1)} 倍<span class="sub">${money(Math.abs(r.v.value)).replace(/<[^>]*>/g, "").replace("+", "")}</span>`), OV().link("flow", { sort: "ratio" }), "今天成交金額 ÷ 前 20 個交易日平均（成交 5 千萬以上）")}

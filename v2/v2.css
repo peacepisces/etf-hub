@@ -387,3 +387,5 @@ h2.sec { font-size: 15px; color: var(--muted); margin: 18px 0 0; }
 .evlist .dt { color: var(--fg); font-family: var(--mono); font-size: 13px; font-weight: 500; }
 .newtag { margin-left: 6px; font-size: 11px; font-weight: 600; color: var(--accent); border: 1px solid var(--accent); background: var(--accent-bg); border-radius: 999px; padding: 0 6px; vertical-align: 1px; white-space: nowrap; }
 .credit { margin-top: 4px; font-size: 11px; color: var(--muted); } .credit a { color: inherit; }
+.spark-wrap { color: var(--accent); } .spark { width: 100%; height: 72px; display: block; }
+.sec3 { font-size: 14px; margin: 0 0 8px; }

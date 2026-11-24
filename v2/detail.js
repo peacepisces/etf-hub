@@ -10,7 +10,7 @@ const Detail = (() => {
   const { esc, isNum, dash, num, pct, aum, shortDate } = C;
   const ym = d => d ? `${d.slice(0, 4)}/${d.slice(5, 7)}` : "—";
   const ymd = d => d ? d.replaceAll("-", "/") : "—";
-  const TABS = [["holdings", "成分股"], ["ops", "操作日報"], ["premium", "折溢價"], ["dividend", "配息"], ["info", "基本資料與費用"]];
+  const TABS = [["holdings", "成分股"], ["ops", "操作日報"], ["premium", "折溢價"], ["dividend", "配息"], ["people", "受益人數"], ["info", "基本資料與費用"]];
   const NO_HOLDINGS = '<p class="empty">這檔沒有持股資料（債券、期貨型或投信沒有公布）</p>';
 
   function money(v) {
@@ -52,7 +52,8 @@ const Detail = (() => {
         ${e.nav_stale
           ? `<span title="投信 ${esc(shortDate(e.nav_stale))} 之後沒有回報淨值，這是當天的淨值">淨值 <b>${num(e.nav)}</b> <span class="stale">${esc(shortDate(e.nav_stale))}・過期</span></span>`
           : `<span title="投信當天的預估淨值；正式淨值隔天公布（海外 ETF 要等國外市場交易結束）">預估淨值 <b>${num(e.nav)}</b></span>`}<span>折溢價 <b>${pct(e.premium)}</b></span>
-        <span>規模 <b>${aum(e.aum)}</b></span><span>殖利率 <b>${esc(yieldText)}</b></span></div>
+        <span>規模 <b>${aum(e.aum)}</b></span><span>殖利率 <b>${esc(yieldText)}</b></span>
+        ${isNum(e.holders) ? `<span title="集保每週資料（${esc(shortDate(e.holders_date))}）">受益人數 <b>${C.people(e.holders)}</b>${isNum(e.holders_chg) ? ` ${C.peopleChg(e.holders_chg)}` : ""}</span>` : ""}</div>
       <div class="rets">${cells.map(([l, v]) => `<div><span>${l}</span><b>${v}</b></div>`).join("")}
         <div class="boxed"><span>${esc(sl)}</span><b>${sv}</b></div>
         <div><span>近 1 年 vs 0050</span><b>${pct(d && d.vs0050_y1)}</b></div></div>
@@ -216,6 +217,36 @@ const Detail = (() => {
       ${feeRows(d && d.fees)}</tbody></table></div>${note}`;
   }
 
+  // ---------- 受益人數（集保每週；使用者 2026-11-24）----------
+  // d.holders：[[資料日, 人數, 小額持有比例（未滿 1 張的人 ÷ 總人數）, 千張大戶持股比例]]
+  // 點數少（每週一點）：用簡單 SVG 折線，不用圖表元件
+  function spark(vals, w = 320, h = 64) {
+    const v = vals.filter(isNum);
+    if (v.length < 2) return "";
+    const lo = Math.min(...v), hi = Math.max(...v), span = hi - lo || 1;
+    const pts = v.map((x, i) => `${(i / (v.length - 1) * (w - 8) + 4).toFixed(1)},${(h - 4 - (x - lo) / span * (h - 8)).toFixed(1)}`).join(" ");
+    return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>`;
+  }
+  function people(e, d) {
+    const s = (d && d.holders) || [];
+    if (!s.length) return '<p class="empty">集保沒有這檔的資料</p>';
+    const [, p, sm, bg] = s[s.length - 1];
+    const prev = s.length > 1 ? s[s.length - 2][1] : null;
+    const pc = v => isNum(v) ? `${num(v, 1)}%` : dash;
+    const cards = `<div class="grid2">
+        <div class="card mini"><span>受益人數</span><b>${C.people(p)}</b><div class="sub">${prev !== null ? `和上週比 ${C.peopleChg(p - prev)}` : "週增減下週開始有"}</div></div>
+        <div class="card mini"><span>小額持有（未滿 1 張）</span><b>${pc(sm)}</b><div class="sub">占受益人數</div></div>
+        <div class="card mini"><span>千張大戶持股</span><b>${pc(bg)}</b><div class="sub">持有超過 1,000 張的人，占全部單位數</div></div></div>`;
+    const chart = s.length > 1 ? `<section class="card"><h3 class="sec3">受益人數走勢（每週）</h3><div class="spark-wrap">${spark(s.map(r => r[1]))}</div>
+        <div class="note">${esc(ymd(s[0][0]))} ～ ${esc(ymd(s[s.length - 1][0]))}・最少 ${C.people(Math.min(...s.map(r => r[1])))}・最多 ${C.people(Math.max(...s.map(r => r[1])))}</div></section>`
+      : '<p class="note">資料從 2026/11/20 開始每週累積，下週開始有走勢</p>';
+    const rows = s.slice().reverse().map(([dt, n, a, b], i, arr) => `<tr><td class="sticky">${ymd(dt)}</td><td class="r num">${C.people(n)}</td>
+      <td class="r num">${arr[i + 1] ? C.peopleChg(n - arr[i + 1][1]) : dash}</td><td class="r num">${pc(a)}</td><td class="r num">${pc(b)}</td></tr>`).join("");
+    return `${cards}${chart}<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="sticky">資料日（週五）</th><th class="r">受益人數</th>
+      <th class="r">週增減</th><th class="r">小額持有</th><th class="r">千張大戶持股</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <p class="note">資料：集保結算所「集保戶股權分散表」，每週五為資料日・受益人數＝集保帳戶持有人數（同一人在不同券商算一人）</p>`;
+  }
+
   function feeRows(f) {
     if (!f) return '<tr><th>費用</th><td>投信投顧公會沒有這檔的資料（上櫃 ETF 或剛上市）</td></tr>';
     const annual = isNum(f.annual) ? `${num(f.annual)}%${f.estimated ? `（預估：只有 ${f.months} 個月資料，換算一年）` : ""}` : dash;
@@ -225,7 +256,7 @@ const Detail = (() => {
       <tr><th>交易成本（近一年）</th><td>${money(f.trade)}<div class="sub">手續費＋交易稅（資料：投信投顧公會）</div></td></tr>`;
   }
 
-  return { head, tabs, ops, holdings, premium, dividend, info, money, limitFlag, liveRows, TABS };
+  return { head, tabs, ops, holdings, premium, dividend, people, info, money, limitFlag, liveRows, TABS };
 })();
 
 if (typeof module !== "undefined") module.exports = Detail;
