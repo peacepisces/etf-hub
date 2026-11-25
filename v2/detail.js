@@ -227,6 +227,19 @@ const Detail = (() => {
     const pts = v.map((x, i) => `${(i / (v.length - 1) * (w - 8) + 4).toFixed(1)},${(h - 4 - (x - lo) / span * (h - 8)).toFixed(1)}`).join(" ");
     return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>`;
   }
+  // 持有分布（使用者 2026-11-24：散戶大戶要完整、做成長條圖）：15 個級距，每列兩條：人數占比、持有單位占比。
+  // 條長以該欄最大值為滿（小的也看得到），數字寫實際占比
+  function distBars(dist) {
+    if (!dist || !dist.rows || !dist.rows.length) return "";
+    const maxP = Math.max(...dist.rows.map(r => r[2])) || 1, maxS = Math.max(...dist.rows.map(r => r[4] || 0)) || 1;
+    const small = v => v > 0 && v < 0.05 ? "<0.1%" : `${num(v, 1)}%`;   // 幾百人的級距不要寫成 0.0%
+    const bar = (cls, v, max, text) => `<div class="db"><i class="${cls}" style="width:${Math.max(0, v / max * 100).toFixed(1)}%"></i><span>${text}</span></div>`;
+    const rows = dist.rows.map(([lab, n, np, sh, sp]) => `<div class="dl">${esc(lab)}</div>
+      ${bar("p", np, maxP, `${C.people(n)} 人・${small(np)}`)}${bar("s", sp || 0, maxS, isNum(sp) ? small(sp) : dash)}`).join("");
+    return `<section class="card"><h3 class="sec3">持有分布（${esc(ymd(dist.date))}）</h3>
+      <div class="dist"><div class="dh">持有張數</div><div class="dh"><i class="p"></i>人數（占受益人數）</div><div class="dh"><i class="s"></i>持有單位（占全部）</div>${rows}</div>
+      <p class="note">例如「1–5 張」有幾個人、占全部受益人的幾 %，以及這些人合計持有全部單位的幾 %・條長以該欄最大值為滿</p></section>`;
+  }
   function people(e, d) {
     const s = (d && d.holders) || [];
     if (!s.length) return '<p class="empty">集保沒有這檔的資料</p>';
@@ -242,7 +255,7 @@ const Detail = (() => {
       : '<p class="note">資料從 2026/11/20 開始每週累積，下週開始有走勢</p>';
     const rows = s.slice().reverse().map(([dt, n, a, b], i, arr) => `<tr><td class="sticky">${ymd(dt)}</td><td class="r num">${C.people(n)}</td>
       <td class="r num">${arr[i + 1] ? C.peopleChg(n - arr[i + 1][1]) : dash}</td><td class="r num">${pc(a)}</td><td class="r num">${pc(b)}</td></tr>`).join("");
-    return `${cards}${chart}<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="sticky">資料日（週五）</th><th class="r">受益人數</th>
+    return `${cards}${distBars(d.holders_dist)}${chart}<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="sticky">資料日（週五）</th><th class="r">受益人數</th>
       <th class="r">週增減</th><th class="r">小額持有</th><th class="r">千張大戶持股</th></tr></thead><tbody>${rows}</tbody></table></div>
       <p class="note">資料：集保結算所「集保戶股權分散表」，每週五為資料日・受益人數＝集保帳戶持有人數（同一人在不同券商算一人）</p>`;
   }

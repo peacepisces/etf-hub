@@ -389,3 +389,13 @@ h2.sec { font-size: 15px; color: var(--muted); margin: 18px 0 0; }
 .credit { margin-top: 4px; font-size: 11px; color: var(--muted); } .credit a { color: inherit; }
 .spark-wrap { color: var(--accent); } .spark { width: 100%; height: 72px; display: block; }
 .sec3 { font-size: 14px; margin: 0 0 8px; }
+/* 受益人數持有分布橫條圖（使用者 2026-11-24） */
+.dist { display: grid; grid-template-columns: 6.2em 1fr 1fr; gap: 6px 12px; align-items: center; font-size: 13px; }
+.dist .dh { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.dist .dh i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.dist .dl { font-family: var(--mono); white-space: nowrap; }
+.dist .db { position: relative; height: 22px; background: var(--panel-2); border-radius: 4px; overflow: hidden; }
+.dist .db i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; opacity: .55; }
+.dist .db span { position: relative; padding: 0 6px; line-height: 22px; font-family: var(--mono); font-size: 12px; white-space: nowrap; }
+.dist i.p { background: var(--accent); } .dist i.s { background: var(--f12); }
+@media (max-width: 600px) { .dist { grid-template-columns: 5em 1fr 1fr; gap: 5px 6px; font-size: 12px; } .dist .db span { font-size: 11px; padding: 0 3px; } }
