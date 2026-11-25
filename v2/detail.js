@@ -79,6 +79,8 @@ const Detail = (() => {
     const notes = ["加碼／減碼看「每單位持股數」（持股股數 ÷ 受益權單位數，扣掉申購贖回），變動 ≥ 0.5%，而且股數真的有增加／減少才算"];
     if (!o.prev) notes.push("這是第一個持股日，還沒有前一天可以比");
     else if (!o.per_unit) notes.push("這天沒有受益權單位數，未扣除申購贖回（用總股數增減）");
+    // 整籃同比例（2026-11-24，0050 全部「加碼 +0.77%」的誤判）：已扣掉共同比例才判斷
+    if (isNum(o.basket)) notes.push(`今天幾乎所有持股的股數都同比例${o.basket > 0 ? "增加" : "減少"} ${num(Math.abs(o.basket))}%（整籃申購贖回，或投信持股比受益權單位數晚一天反映），這不算加減碼；表上的變動幅度已扣掉這個比例`);
     if (o.diluted) notes.push(`另有 ${o.diluted} 檔每單位持股數的變動來自申購贖回（股數沒變或和每單位變動方向相反），不算加減碼`);
     const body = rows.map(r => `<tr><td class="sticky">${esc(r.n || r.s)}<span class="code">${esc(r.s)}</span></td>
       <td><span class="flag ${esc(r.flag)}">${esc(r.flag || "—")}</span></td>
