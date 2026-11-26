@@ -153,8 +153,8 @@ async function render() {
     else if (route === "stock") html = Pages.stock(o, await loadIndex(), args[0] || "", state.sort.stock);
     else if (route === "events") html = Today.eventsPage(await loadSite("calendar.json"), state.ev.kind, state.ev.day, state.ev.ym);
     else {
-      const [radar, events, flows] = await Promise.all(["radar.json", "events.json", "flows.json"].map(n => loadSite(n)));
-      html = Today.page(o, { radar, events, flows }, { watch: Today.loadWatch(storage()), passive: state.passive });
+      const [radar, events, flows, chips] = await Promise.all(["radar.json", "events.json", "flows.json", "chips.json"].map(n => loadSite(n)));
+      html = Today.page(o, { radar, events, flows, chips }, { watch: Today.loadWatch(storage()), passive: state.passive });
     }
     if (seq !== renderSeq) return;
     if (state.chart) { state.chart.destroy(); state.chart = null; }

@@ -399,3 +399,17 @@ h2.sec { font-size: 15px; color: var(--muted); margin: 18px 0 0; }
 .dist .db span { position: relative; padding: 0 6px; line-height: 22px; font-family: var(--mono); font-size: 12px; white-space: nowrap; }
 .dist i.p { background: var(--accent); } .dist i.s { background: var(--f12); }
 @media (max-width: 600px) { .dist { grid-template-columns: 5em 1fr 1fr; gap: 5px 6px; font-size: 12px; } .dist .db span { font-size: 11px; padding: 0 3px; } }
+
+/* 申贖解讀、大盤籌碼（2026-11-26） */
+.rk-head { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.rk-list li { flex-wrap: wrap; }
+.rk-why { flex-basis: 100%; margin-left: calc(1.2em + 8px) !important; font-size: 12px; color: var(--muted); display: flex; gap: 6px; align-items: center; margin-top: 2px; }
+.rk-why .tag2, .rk-head .tag2 { white-space: nowrap; }
+.rk-why .tag2 { font-size: 11px; padding: 0 7px; }
+.tag2.rk-up { color: var(--up); border-color: var(--up); }
+.tag2.rk-up2 { color: var(--up); }
+.tag2.rk-down { color: var(--bg, #fff); background: var(--down); border-color: var(--down); font-weight: 600; }
+.tag2.rk-down2 { color: var(--down); }
+.tag2.rk-hold { color: var(--accent); border-color: var(--accent); background: var(--accent-bg); }
+.chips-t { margin-bottom: 8px; }
+.chips-t td:first-child { white-space: nowrap; }

@@ -180,8 +180,9 @@ const Detail = (() => {
     // （海外 ETF 的正式淨值要等國外收盤，拿台股收盤價比會時差錯開，所以不用正式淨值重算，使用者 2026-11-16）
     const note = `<p class="note">淨值：最新一天是投信預估，之前是正式淨值・折溢價：證交所公布（台股收盤當下的預估淨值），`
       + `海外 ETF 的正式淨值要等國外收盤才算，所以「股價÷淨值」和折溢價會差一點${p.length < 20 ? `・資料自 ${ymd(p[0][0])} 起` : ""}</p>`;
-    const rows = p.slice().reverse().map(r => `<tr><td class="sticky">${ymd(r[0])}</td><td class="r num">${num(r[1])}</td>
-      <td class="r num">${num(r[2], r[2] % 1 && String(r[2]).split(".")[1]?.length > 2 ? 4 : 2)}</td><td class="r num">${pct(r[3])}</td></tr>`).join("");
+    // 最新一天標「估」（使用者 2026-11-26：00400A 11/25 投信官網 10.58、這裡 10.64，以為錯；其實是預估，隔天 17:30 換正式）
+    const rows = p.slice().reverse().map((r, i) => `<tr><td class="sticky">${ymd(r[0])}</td><td class="r num">${num(r[1])}</td>
+      <td class="r num">${num(r[2], r[2] % 1 && String(r[2]).split(".")[1]?.length > 2 ? 4 : 2)}${i === 0 ? '<sup title="投信預估淨值，隔天收盤後換成正式淨值">估</sup>' : ""}</td><td class="r num">${pct(r[3])}</td></tr>`).join("");
     return `${note}<section class="card"><div class="legend" id="prem-legend"></div><div class="chart short" id="prem-bars"></div>
       <div class="chart short" id="prem-lines"></div></section>
       <div class="tbl-wrap"><table class="tbl"><thead><tr><th class="sticky">日期</th><th class="r">股價</th><th class="r">淨值</th>

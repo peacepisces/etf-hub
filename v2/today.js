@@ -152,6 +152,66 @@ const Today = (() => {
       `集保每週資料・${day}・「本週增加最多」下週開始有`);
   }
 
+  // ---------- 大盤籌碼（使用者 2026-11-26：像看盤 App 的籌碼日報；之後台指期自動交易也要用） ----------
+  const signed = (v, d = 0) => isNum(v) ? `<span class="${v > 0 ? "up" : v < 0 ? "down" : ""}">${v > 0 ? "+" : v < 0 ? "−" : ""}${num(Math.abs(v), d)}</span>` : dash;
+  const yi = v => isNum(v) ? signed(v / 1e8, 1) : dash;
+  function chipsCard(ch) {
+    const days = (ch && ch.days) || [];
+    if (!days.length) return "";
+    const d = days[0];
+    const rows = [["外資台指期淨未平倉（口）", signed(d.fut_foreign), signed(d.fut_foreign_chg)],
+      ["散戶小台淨未平倉（口）", signed(d.retail_mtx), signed(d.retail_mtx_chg)],
+      ["散戶微台淨未平倉（口）", signed(d.retail_tmx), signed(d.retail_tmx_chg)],
+      ["三大法人買賣超（億）", yi(d.spot_total), ""], ["外資買賣超（億）", yi(d.spot_foreign), ""],
+      ["投信買賣超（億）", yi(d.spot_trust), ""], ["自營商買賣超（億）", yi(d.spot_dealer), ""],
+      ["融資變動（億）", isNum(d.margin) ? signed(d.margin / 1e8, 2) : dash, ""], ["融券變動（萬張）", isNum(d.short) ? signed(d.short / 1e4, 2) : dash, ""]];
+    const body = `<table class="tbl mini-t chips-t"><thead><tr><th class="sticky">項目</th><th class="r">${shortDate(d.date)}</th><th class="r">增減</th></tr></thead>
+      <tbody>${rows.map(r => `<tr><td class="sticky">${r[0]}</td><td class="r num">${r[1]}</td><td class="r num">${r[2]}</td></tr>`).join("")}</tbody></table>
+      <table class="tbl mini-t chips-t"><thead><tr><th class="sticky">近 5 日</th><th class="r">外資台指</th><th class="r">外資現貨（億）</th><th class="r">散戶小台</th></tr></thead>
+      <tbody>${days.slice(0, 5).map(x => `<tr><td class="sticky">${shortDate(x.date)}</td><td class="r num">${signed(x.fut_foreign)}</td>
+        <td class="r num">${yi(x.spot_foreign)}</td><td class="r num">${signed(x.retail_mtx)}</td></tr>`).join("")}</tbody></table>`;
+    return card("大盤籌碼", body, "",
+      "期交所、證交所公開資料（上市）・淨未平倉是台指期多空未平倉口數淨額・散戶＝小台（微台）三大法人淨未平倉的相反數・"
+      + "融資融券約晚上 9 點公布，還沒公布顯示 —・官股買賣超不是公開資料，沒有列");
+  }
+
+  // ---------- 申贖解讀（使用者 2026-11-26：PTT 說外資用主動式 ETF 折價贖回砸盤 → 用單位數、折溢價、法人買賣超檢查） ----------
+  const RK = { "溢價申購": "rk-up", "申購": "rk-up2", "折價贖回": "rk-down", "贖回": "rk-down2", "外資留倉": "rk-hold" };
+  const zhang = v => `${num(Math.abs(v) / 1e4, Math.abs(v) >= 1e5 ? 1 : 2)} 萬張`;
+  function redeemWhy(r) {
+    const prem = isNum(r.premium) ? `${r.premium >= 0 ? "溢價" : "折價"} ${num(Math.abs(r.premium))}%` : "";
+    const who = [["外資", r.foreign], ["投信", r.trust], ["自營商", r.dealer]].filter(([, v]) => isNum(v) && v);
+    let act = "";
+    if (r.kind === "溢價申購" || r.kind === "申購") {
+      const w = who.filter(([, v]) => v < 0).sort((a, b) => a[1] - b[1])[0];
+      if (w) act = `${w[0]}賣 ${zhang(w[1])}`;
+    } else if (r.kind === "外資留倉") act = `外資買 ${zhang(r.foreign)}，單位數沒減少`;
+    else {
+      const w = who.filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1])[0];
+      if (w) act = `${w[0]}買 ${zhang(w[1])}`;
+    }
+    return [shortDate(r.trade_date), prem, act].filter(Boolean).join("・");
+  }
+  function redeemCard(o, f) {
+    const rd = f && f.redeem;
+    if (!rd || !rd.rows) return "";
+    const byCode = new Map(o.etfs.map(e => [e.code, e]));
+    const rows = rd.rows.filter(r => byCode.has(r.code));
+    const sum = k => rows.filter(r => r.kind === k);
+    const tot = k => sum(k).reduce((a, r) => a + r.amount, 0);
+    const head = ["溢價申購", "折價贖回", "外資留倉"].map(k => `<span class="tag2 ${RK[k]}">${k} ${sum(k).length} 檔${k !== "外資留倉" && sum(k).length ? ` ${money(tot(k)).replace(/<[^>]*>/g, "")}` : ""}</span>`).join(" ");
+    // 折價贖回、外資留倉是這張卡的重點，排前面；再依金額
+    const order = r => (r.kind === "折價贖回" ? 0 : r.kind === "外資留倉" ? 1 : 2);
+    const list = rows.slice().sort((a, b) => order(a) - order(b) || Math.abs(b.amount) - Math.abs(a.amount)).slice(0, 8);
+    const body = `<div class="rk-head">${head}</div>` + (list.length ? `<ol class="toplist rk-list">${list.map(r => `<li>${etfLink(byCode.get(r.code))}
+        <b>${r.kind === "外資留倉" ? "" : money(r.amount)}</b><span class="rk-why"><span class="tag2 ${RK[r.kind]}">${r.kind}</span>${esc(redeemWhy(r))}</span></li>`).join("")}</ol>`
+      : '<p class="empty">沒有明顯的申購贖回</p>');
+    return card("申贖解讀", body, OV().link("flow", { sort: "f_d1" }),
+      `單位數變化 × 淨值＝淨申購（＋）／淨贖回（−），同一天的申購和贖回會抵銷・多數投信的單位數晚一天反映，日期是交易日・`
+      + `溢價申購＝市場追價，造市商賣給買方再申購補貨；折價贖回＝有人折價買進再贖回，投信要賣成分股（賣壓轉到股票）；`
+      + `外資留倉＝外資折價買超、單位數沒減少・折溢價 ±0.3% 以上才算套利，列 3 億以上或單位數變 5% 以上`);
+  }
+
   // opts.noInst：舊參數（以前三大法人是空卡），現在不用
   function lowerCards(o, f, opts = {}) {
     const byCode = new Map(o.etfs.map(e => [e.code, e]));
@@ -166,6 +226,8 @@ const Today = (() => {
     const down = movers.slice().sort((a, b) => a.chg_pct - b.chg_pct).slice(0, 5).map(e => ({ e }));
     const prem = o.etfs.filter(e => isNum(e.premium) && Math.abs(e.premium) >= 2).sort((a, b) => Math.abs(b.premium) - Math.abs(a.premium)).slice(0, 8).map(e => ({ e }));
     return `<div class="tgrid">
+      ${redeemCard(o, f)}
+      ${chipsCard(opts.chips)}
       ${holdersCard(o)}
       ${card("資金流向・最吸金", topList(inflow, r => money(r.v)), OV().link("flow", { sort: "f_d1" }), `受益權單位數變化 × 淨值・${f ? shortDate(f.end) : ""}・資料自 ${since ? shortDate(since) : "—"} 起`)}
       ${card("資金流向・最失血", topList(outflow, r => money(r.v)), OV().link("flow", { sort: "f_d1", dir: 1 }))}
@@ -251,7 +313,7 @@ const Today = (() => {
   }
 
   function page(o, data, opts) {
-    return `${perfRow(o, opts.watch)}<div class="tgrid two">${radarCard(data.radar, opts.passive)}${eventsCard(data.events)}</div>${lowerCards(o, data.flows)}`;
+    return `${perfRow(o, opts.watch)}<div class="tgrid two">${radarCard(data.radar, opts.passive)}${eventsCard(data.events)}</div>${lowerCards(o, data.flows, { chips: data.chips })}`;
   }
 
   return { groups, beat, loadWatch, saveWatch, radarRows, radarDates, page, eventsPage, lowerCards, WATCH_KEY };
